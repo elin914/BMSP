@@ -1,17 +1,17 @@
 import time
 from config import Config
 from data import Data
+from utils import *
+from model import Model
 
 
 if __name__ == '__main__':
     start_time = time.time()
 
     config = Config()
+    set_random_seed(config.random_seed)
     data = Data()
-    data.get_data(config)
-    # cpmodel = CPModel(config)
-    # cpmodel.data_preprocessing()
-    # cpmodel.get_heuristic_solution()
-    # cpmodel.run_model()
+    data.make_data(config)
+    model = Model(config)
 
     print(time.time() - start_time)
