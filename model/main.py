@@ -2,7 +2,7 @@ import time
 from config import Config
 from data import Data
 from utils import *
-from model import Model
+from models import model_builder
 
 
 if __name__ == '__main__':
@@ -12,6 +12,7 @@ if __name__ == '__main__':
     set_random_seed(config.random_seed)
     data = Data()
     data.make_data(config)
-    model = Model(config)
+    model = model_builder(config)
+    solution = model.solve(data.job_dict, data.machines)
 
     print(time.time() - start_time)

@@ -19,15 +19,19 @@ class Machine:
         self.height = height
 
 
+class Batch:
+    pass
+
+
 class Data:
     def __init__(self):
         self.job_dict = dict()
-        self.machine = None
+        self.machines = None
 
     def make_data(self, config):
         setting = config.data_instance
         bin_size = 10 if setting['size_type'] == 'A' else 100
-        self.machine = Machine(setting['n_machines'], bin_size, bin_size)
+        self.machines = Machine(setting['n_machines'], bin_size, bin_size)
 
         job_per_family = int(setting['total_n_jobs'] / setting['n_families'])
         for i in range(setting['n_families']):

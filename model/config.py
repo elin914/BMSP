@@ -16,7 +16,12 @@ class Config:
             'beta': 0.5  # 0.25, 0.5, 0.75
         }
 
-        self.model_name = 'heuristic'
+        self.model_type = '2_phase_sequence'  # 2_phase_sequence, 2_phase_integrated, integrated
+        self.sequencer = 'SPT'  # SPT, LPT, EDD, MS, RKGA, SA, LNS
+        self.packer = 'BFF'
+        self.grouper = 'CP'
+        self.scheduler = 'IBH'  # IBH, Backward, GA, SA, LNS
+        self.integrated_scheduler = 'CP'
 
         current_time = time.localtime()
         self.result_folder_path = '../results/{0}_{1}h_{2}m_{3}s'.format(time.strftime('%Y%m%d'),
