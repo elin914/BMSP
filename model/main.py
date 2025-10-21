@@ -13,6 +13,6 @@ if __name__ == '__main__':
     data = Data()
     data.make_data(config)
     model = model_builder(config)
-    solution = model.solve(data.job_dict, data.machines)
+    solution = model.solve(data.job_list, data.machines)
 
     print(time.time() - start_time)

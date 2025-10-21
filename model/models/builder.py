@@ -4,8 +4,8 @@ from .groupers import *
 from .schedulers import *
 from .integrated_schedulers import *
 
-sequencing_dispatcher = {'SPT': SPTSequencer}
-packing_dispatcher = {'BFF': BFFPacker}
+sequencing_dispatcher = {'SPT': SPTSequencer, 'LPT': LPTSequencer, 'EDD': EDDSequencer, 'MS': MSSequencer}
+packing_dispatcher = {'BFF': BFFPacker, 'ABFF': AdujustedBFFPacker}
 grouping_dispatcher = {'CP': CPGrouper}
 scheduling_dispatcher = {'IBH': IBHScheduler}
 integrated_scheduling_dispatcher = {'CP': CPIntegratedScheduler}
@@ -17,9 +17,9 @@ class TwoPhaseSequenceGrouping:
         self.packer = packer
         self.scheduler = scheduler
 
-    def solve(self, job_dict, machines):
-        job_sequence_list = self.sequencer.get_sequence_list(job_dict, machines)
-        batch_list = self.packer.create_batch_list(job_sequence_list, machines)
+    def solve(self, job_list, machines):
+        job_sequence_list = self.sequencer.get_sequence_list(job_list, machines)
+        batch_list = self.packer.create_batch_list(job_list, job_sequence_list, machines)
         final_schedule = self.scheduler.get_schedule(batch_list)
         return final_schedule
 
@@ -29,8 +29,8 @@ class TwoPhaseIntegratedGrouping:
         self.grouper = grouper
         self.scheduler = scheduler
 
-    def solve(self, job_dict, machines):
-        batch_list = self.grouper.create_batch_list(job_dict, machines)
+    def solve(self, job_list, machines):
+        batch_list = self.grouper.create_batch_list(job_list, machines)
         final_schedule = self.scheduler.get_schedule(batch_list)
         return final_schedule
 
@@ -39,8 +39,8 @@ class IntegratedScheduling:
     def __init__(self, integrated_scheduler):
         self.integrated_scheduler = integrated_scheduler
 
-    def solve(self, job_dict, machines):
-        return self.integrated_scheduler.get_schedule(job_dict, machines)
+    def solve(self, job_list, machines):
+        return self.integrated_scheduler.get_schedule(job_list, machines)
 
 
 def model_builder(config):

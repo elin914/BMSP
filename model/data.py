@@ -2,14 +2,14 @@ import numpy as np
 
 
 class Job:
-    def __init__(self, number, family, width, height, p_time):
+    def __init__(self, number, family, width, height, p_time, release_date, due_date):
         self.number = number
         self.family = family
         self.width = width
         self.height = height
         self.p_time = p_time
-        self.release_date = None
-        self.due_date = None
+        self.release_date = release_date
+        self.due_date = due_date
 
 
 class Machine:
@@ -19,13 +19,36 @@ class Machine:
         self.height = height
 
 
+class PlacedJob:
+    def __init__(self, job, rotation, x, y, width, height):
+        self.job = job
+        self.rotation = rotation
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+
 class Batch:
-    pass
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.family = None
+        self.placed_job_list = list()
+        self.ems_list = list()
+        self.processing_time = None
+        self.max_release_date = None
+        self.due_date_list = list()
+
+    def update_by_placed_job_list(self):
+        self.processing_time = self.placed_job_list[0].job.p_time
+        self.max_release_date = max([placedjob.job.release_date for placedjob in self.placed_job_list])
+        self.due_date_list = [placedjob.job.due_date for placedjob in self.placed_job_list]
 
 
 class Data:
     def __init__(self):
-        self.job_dict = dict()
+        self.job_list = None
         self.machines = None
 
     def make_data(self, config):
@@ -34,21 +57,25 @@ class Data:
         self.machines = Machine(setting['n_machines'], bin_size, bin_size)
 
         job_per_family = int(setting['total_n_jobs'] / setting['n_families'])
-        for i in range(setting['n_families']):
-            p_time_list = []
-            for j in range(job_per_family):
-                width = np.random.randint(1, 11) if setting['size_type'] == 'A'\
-                    else np.random.randint(20, 81)
-                height = np.random.randint(1, 11) if setting['size_type'] == 'A'\
-                    else np.random.randint(20, 81)
-                p_time = int(np.random.choice([2, 4, 10, 16, 20], p=[0.2, 0.2, 0.3, 0.2, 0.1]))
-                p_time_list.append(p_time * width * height)
-                self.job_dict[i * job_per_family + j] =\
-                    Job(i * job_per_family + j, i, width, height, p_time)
-            temp_max_time = np.sum(p_time_list) / (setting['n_machines'] * bin_size * bin_size)
-            for j in range(job_per_family):
-                release_date = np.random.randint(1, max(1, int(setting['alpha'] * temp_max_time)) + 1)
-                due_date = (release_date + self.job_dict[i * job_per_family + j].p_time
-                            + np.random.randint(1, max(1, int(setting['beta'] * temp_max_time)) + 1))
-                self.job_dict[i * job_per_family + j].release_date = release_date
-                self.job_dict[i * job_per_family + j].due_date = due_date
+        p_time_per_family_list = (
+            np.random.choice([2, 4, 10, 16, 20], size=setting['n_families'], p=[0.2, 0.2, 0.3, 0.2, 0.1]))
+        family_id_list = np.repeat(np.arange(setting['n_families']), job_per_family)
+        p_time_list = np.repeat(p_time_per_family_list, job_per_family)
+        if setting['size_type'] == 'A':
+            width_list = np.random.randint(1, 11, size=setting['total_n_jobs'])
+            height_list = np.random.randint(1, 11, size=setting['total_n_jobs'])
+        else:
+            width_list = np.random.randint(20, 81, size=setting['total_n_jobs'])
+            height_list = np.random.randint(20, 81, size=setting['total_n_jobs'])
+        area_list = width_list * height_list
+        temp = (np.sum(p_time_per_family_list) * np.average(area_list) /
+                (setting['n_machines'] * bin_size * bin_size))
+        # temp = np.sum(p_time_per_family_list) / (setting['n_machines'] * 8)
+        release_date_list =\
+            np.random.randint(0, max(1, int(setting['alpha'] * temp)) + 1, size=setting['total_n_jobs'])
+        due_date_list = (
+                np.random.randint(0, max(1, int(setting['alpha'] * temp)) + 1, size=setting['total_n_jobs'])
+                + release_date_list + p_time_list)
+        self.job_list = [Job(i, int(family_id_list[i]), int(width_list[i]), int(height_list[i]),
+                             int(p_time_list[i]), int(release_date_list[i]), int(due_date_list[i]))
+                         for i in range(setting['total_n_jobs'])]

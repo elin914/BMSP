@@ -9,8 +9,8 @@ class Config:
 
         self.data_instance = {
             'size_type': 'A',  # A, B
-            'n_machines': 3,  # 3, 4, 5
-            'n_families': 3,  # 3, 6, 12
+            'n_machines': 4,  # 3, 4, 5
+            'n_families': 6,  # 3, 6, 12
             'total_n_jobs': 180,  # 60, 180, 300
             'alpha': 0.5,  # 0.25, 0.5, 0.75
             'beta': 0.5  # 0.25, 0.5, 0.75
@@ -18,7 +18,7 @@ class Config:
 
         self.model_type = '2_phase_sequence'  # 2_phase_sequence, 2_phase_integrated, integrated
         self.sequencer = 'SPT'  # SPT, LPT, EDD, MS, RKGA, SA, LNS
-        self.packer = 'BFF'
+        self.packer = 'BFF'  # BFF, ABFF
         self.grouper = 'CP'
         self.scheduler = 'IBH'  # IBH, Backward, GA, SA, LNS
         self.integrated_scheduler = 'CP'
