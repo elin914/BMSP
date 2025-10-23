@@ -53,30 +53,30 @@ class Data:
         self.machines = None
 
     def make_data(self, config):
-        setting = config.data_instance
-        bin_size = 10 if setting['size_type'] == 'A' else 100
-        self.machines = Machine(setting['n_machines'], bin_size, bin_size)
+        bin_size = 10 if config.data_instance['size_type'] == 'A' else 100
+        self.machines = Machine(config.data_instance['n_machines'], bin_size, bin_size)
 
-        job_per_family = int(setting['total_n_jobs'] / setting['n_families'])
+        job_per_family = int(config.data_instance['total_n_jobs'] / config.data_instance['n_families'])
         p_time_per_family_list = (
-            np.random.choice([2, 4, 10, 16, 20], size=setting['n_families'], p=[0.2, 0.2, 0.3, 0.2, 0.1]))
-        family_id_list = np.repeat(np.arange(setting['n_families']), job_per_family)
+            np.random.choice([2, 4, 10, 16, 20], size=config.data_instance['n_families'], p=[0.2, 0.2, 0.3, 0.2, 0.1]))
+        family_id_list = np.repeat(np.arange(config.data_instance['n_families']), job_per_family)
         p_time_list = np.repeat(p_time_per_family_list, job_per_family)
-        if setting['size_type'] == 'A':
-            width_list = np.random.randint(1, 11, size=setting['total_n_jobs'])
-            height_list = np.random.randint(1, 11, size=setting['total_n_jobs'])
+        if config.data_instance['size_type'] == 'A':
+            width_list = np.random.randint(1, 11, size=config.data_instance['total_n_jobs'])
+            height_list = np.random.randint(1, 11, size=config.data_instance['total_n_jobs'])
         else:
-            width_list = np.random.randint(20, 81, size=setting['total_n_jobs'])
-            height_list = np.random.randint(20, 81, size=setting['total_n_jobs'])
+            width_list = np.random.randint(20, 81, size=config.data_instance['total_n_jobs'])
+            height_list = np.random.randint(20, 81, size=config.data_instance['total_n_jobs'])
         area_list = width_list * height_list
-        temp = (np.sum(p_time_per_family_list) * np.average(area_list) /
-                (setting['n_machines'] * bin_size * bin_size))
-        # temp = np.sum(p_time_per_family_list) / (setting['n_machines'] * 8)
+        temp = (np.sum(p_time_list) * np.average(area_list) /
+        # temp = (np.average(p_time_list * area_list) /
+        # temp = (np.sum(p_time_family_list) * np.average(area_list) /
+                (config.data_instance['n_machines'] * bin_size * bin_size))
         release_date_list =\
-            np.random.randint(0, max(1, int(setting['alpha'] * temp)) + 1, size=setting['total_n_jobs'])
+            np.random.randint(0, max(1, int(config.data_instance['alpha'] * temp)) + 1, size=config.data_instance['total_n_jobs'])
         due_date_list = (
-                np.random.randint(0, max(1, int(setting['alpha'] * temp)) + 1, size=setting['total_n_jobs'])
+                np.random.randint(0, max(1, int(config.data_instance['alpha'] * temp)) + 1, size=config.data_instance['total_n_jobs'])
                 + release_date_list + p_time_list)
         self.job_list = [Job(i, int(family_id_list[i]), int(width_list[i]), int(height_list[i]),
                              int(p_time_list[i]), int(release_date_list[i]), int(due_date_list[i]))
-                         for i in range(setting['total_n_jobs'])]
+                         for i in range(config.data_instance['total_n_jobs'])]
