@@ -2,8 +2,8 @@ import numpy as np
 
 
 class Job:
-    def __init__(self, number, family, width, height, p_time, release_date, due_date):
-        self.number = number
+    def __init__(self, idx, family, width, height, p_time, release_date, due_date):
+        self.idx = idx
         self.family = family
         self.width = width
         self.height = height
@@ -30,7 +30,8 @@ class PlacedJob:
 
 
 class Batch:
-    def __init__(self, width, height):
+    def __init__(self, idx, width, height):
+        self.idx = idx
         self.width = width
         self.height = height
         self.family = None

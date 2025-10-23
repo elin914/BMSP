@@ -10,7 +10,7 @@ integrated_solver_dispatcher = {'CP': CPSolver}
 grouping_sequencers_dispatcher = {'SPT': SPTSequencer, 'LPT': LPTSequencer, 'EDD': EDDSequencer, 'MS': MSSequencer}
 grouper_dispatcher = {'BFF': BFFPacker, 'ABFF': AdujustedBFFPacker}
 integrated_grouper_dispatcher = {'CP': CPGrouper}
-scheduling_sequencer_dispatcher = {}
+scheduling_sequencer_dispatcher = {'EDD': EDDSequencer}
 scheduler_dispatcher = {'IBH': IBHScheduler}
 integrated_scheduler_dispatcher = {'CP': CPIntegratedScheduler}
 
@@ -75,27 +75,27 @@ def model_builder(config):
     model_type = config.model_type
 
     if model_type == 'Integrated':
-        integrated_solver = integrated_solver_dispatcher[config.integrated_solver]
+        integrated_solver = integrated_solver_dispatcher[config.integrated_solver]()
         return IntegratedModel(integrated_solver)
     elif model_type == 'Sequential_Sequential':
-        grouping_sequencer = grouping_sequencers_dispatcher[config.grouping_sequencer]
-        grouper = grouper_dispatcher[config.grouper]
-        scheduling_sequencer = scheduling_sequencer_dispatcher[config.scheduling_sequencer]
-        scheduler = scheduler_dispatcher[config.scheduler]
+        grouping_sequencer = grouping_sequencers_dispatcher[config.grouping_sequencer]()
+        grouper = grouper_dispatcher[config.grouper]()
+        scheduling_sequencer = scheduling_sequencer_dispatcher[config.scheduling_sequencer]()
+        scheduler = scheduler_dispatcher[config.scheduler]()
         return SequentialGroupingSequentialSchedulingModel(grouping_sequencer, grouper, scheduling_sequencer, scheduler)
     elif model_type == 'Sequential_Integrated':
-        grouping_sequencer = grouping_sequencers_dispatcher[config.grouping_sequencer]
-        grouper = grouper_dispatcher[config.grouper]
-        integrated_scheduler = integrated_scheduler_dispatcher[config.integrated_scheduler]
+        grouping_sequencer = grouping_sequencers_dispatcher[config.grouping_sequencer]()
+        grouper = grouper_dispatcher[config.grouper]()
+        integrated_scheduler = integrated_scheduler_dispatcher[config.integrated_scheduler]()
         return SequentialGroupingIntegratedSchedulingModel(grouping_sequencer, grouper, integrated_scheduler)
     elif model_type == 'Integrated_Sequential':
-        integrated_grouper = integrated_grouper_dispatcher[config.integrated_grouper]
-        scheduling_sequencer = scheduling_sequencer_dispatcher[config.scheduling_sequencer]
-        scheduler = scheduler_dispatcher[config.scheduler]
+        integrated_grouper = integrated_grouper_dispatcher[config.integrated_grouper]()
+        scheduling_sequencer = scheduling_sequencer_dispatcher[config.scheduling_sequencer]()
+        scheduler = scheduler_dispatcher[config.scheduler]()
         return IntegratedGroupingSequentialSchedulingModel(integrated_grouper, scheduling_sequencer, scheduler)
     elif model_type == 'Integrated_Integrated':
-        integrated_grouper = integrated_grouper_dispatcher[config.integrated_grouper]
-        integrated_scheduler = integrated_scheduler_dispatcher[config.integrated_scheduler]
+        integrated_grouper = integrated_grouper_dispatcher[config.integrated_grouper]()
+        integrated_scheduler = integrated_scheduler_dispatcher[config.integrated_scheduler]()
         return IntegratedGroupingIntegratedSchedulingModel(integrated_grouper, integrated_scheduler)
     else:
         raise ValueError(f"지원하지 않는 모델 타입입니다: {model_type}")

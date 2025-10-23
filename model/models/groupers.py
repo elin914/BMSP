@@ -1,5 +1,6 @@
 from typing import List
 from model.data import Job, PlacedJob, Batch
+import numpy as np
 
 
 class BaseGrouper:
@@ -18,10 +19,6 @@ class EMS:
 class BFFPacker(BaseGrouper):
     def create_batch_list(self, job_list: List[Job], job_sequence_list: List[int], machines) -> List[Batch]:
         batch_list = list()
-        first_batch = Batch(machines.width, machines.height)
-        first_batch.ems_list.append(EMS(0, 0, machines.width, machines.height))
-        batch_list.append(first_batch)
-
         min_area_dict_by_family = dict()
         job_list_by_family = dict()
         for job in job_list:
@@ -37,7 +34,7 @@ class BFFPacker(BaseGrouper):
             job = job_list[job_id]
             best_fit_info = self.find_best_fit_in_batch_list(job, batch_list)
             if best_fit_info is None:
-                new_batch = Batch(machines.width, machines.height)
+                new_batch = Batch(len(batch_list), machines.width, machines.height)
                 new_batch.ems_list.append(EMS(0, 0, machines.width, machines.height))
                 batch_list.append(new_batch)
                 best_fit_info = {'batch_idx': len(batch_list) - 1, 'ems_idx': 0, 'rotation': False,
@@ -63,25 +60,28 @@ class BFFPacker(BaseGrouper):
 
     @staticmethod
     def find_best_fit_in_batch_list(job, batch_list):
-        for i, batch in enumerate(batch_list):
+        # for _, batch in enumerate(batch_list):
+        for _, batch in enumerate(sorted(batch_list,
+                                         key=lambda item: np.average(item.due_date_list) - job.due_date
+                                         if item.due_date_list else float('inf'))):
             if batch.family is not None and batch.family != job.family:
                 continue
-            for j, ems in enumerate(sorted(batch.ems_list, key=lambda k: k.width * k.height)):
+            for j, ems in enumerate(sorted(batch.ems_list, key=lambda item: item.width * item.height)):
                 fit_normal = (ems.width >= job.width and ems.height >= job.height)
                 fit_rotated = (ems.width >= job.height and ems.height >= job.width)
 
                 if fit_normal and not fit_rotated:
-                    return {'batch_idx': i, 'ems_idx': j, 'rotation': False, 'width': job.width, 'height': job.height}
+                    return {'batch_idx': batch.idx, 'ems_idx': j, 'rotation': False, 'width': job.width, 'height': job.height}
                 if not fit_normal and fit_rotated:
-                    return {'batch_idx': i, 'ems_idx': j, 'rotation': True, 'width': job.height, 'height': job.width}
+                    return {'batch_idx': batch.idx, 'ems_idx': j, 'rotation': True, 'width': job.height, 'height': job.width}
                 if fit_normal and fit_rotated:
                     metric_normal = min(ems.width - job.width, ems.height - job.height)
                     metric_rotated = min(ems.width - job.height, ems.height - job.width)
                     if metric_rotated >= metric_normal:
-                        return {'batch_idx': i, 'ems_idx': j, 'rotation': False,
+                        return {'batch_idx': batch.idx, 'ems_idx': j, 'rotation': False,
                                 'width': job.width, 'height': job.height}
                     else:
-                        return {'batch_idx': i, 'ems_idx': j, 'rotation': True,
+                        return {'batch_idx': batch.idx, 'ems_idx': j, 'rotation': True,
                                 'width': job.height, 'height': job.width}
         return None
 
@@ -130,6 +130,7 @@ class BFFPacker(BaseGrouper):
 
         batch.ems_list = final_ems_list
         batch.ems_list.sort(key=lambda e: e.width * e.height)
+        batch.update_by_placed_job_list()
 
 
 class AdujustedBFFPacker(BFFPacker):

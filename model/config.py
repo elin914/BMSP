@@ -17,10 +17,10 @@ class Config:
         }
 
         # Integrated, Sequential_Sequential, Sequential_Integrated, Integrated_Sequential, Integrated_Integrated
-        self.model_type = 'Integrated'
-        self.integrated_sovler = 'CP'
+        self.model_type = 'Sequential_Sequential'
+        self.integrated_solver = 'CP'
         self.grouping_sequencer = 'SPT'  # SPT, LPT, EDD, MS, RKGA, SA, LNS
-        self.groper = 'BFF'  # BFF, ABFF
+        self.grouper = 'BFF'  # BFF, ABFF
         self.integrated_grouper = 'CP'
         self.scheduling_sequencer = 'EDD'  # EDD, GA, SA, LNS
         self.scheduler = 'IBH'  # IBH, Backward
