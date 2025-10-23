@@ -16,11 +16,14 @@ class Config:
             'beta': 0.5  # 0.25, 0.5, 0.75
         }
 
-        self.model_type = '2_phase_sequence'  # 2_phase_sequence, 2_phase_integrated, integrated
-        self.sequencer = 'SPT'  # SPT, LPT, EDD, MS, RKGA, SA, LNS
-        self.packer = 'BFF'  # BFF, ABFF
-        self.grouper = 'CP'
-        self.scheduler = 'IBH'  # IBH, Backward, GA, SA, LNS
+        # Integrated, Sequential_Sequential, Sequential_Integrated, Integrated_Sequential, Integrated_Integrated
+        self.model_type = 'Integrated'
+        self.integrated_sovler = 'CP'
+        self.grouping_sequencer = 'SPT'  # SPT, LPT, EDD, MS, RKGA, SA, LNS
+        self.groper = 'BFF'  # BFF, ABFF
+        self.integrated_grouper = 'CP'
+        self.scheduling_sequencer = 'EDD'  # EDD, GA, SA, LNS
+        self.scheduler = 'IBH'  # IBH, Backward
         self.integrated_scheduler = 'CP'
 
         current_time = time.localtime()
