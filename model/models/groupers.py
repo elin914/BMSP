@@ -52,7 +52,7 @@ class BFFPacker(BaseGrouper):
                     if batch.family == job.family:
                         batch.ems_list = [ems for ems in batch.ems_list
                                           if ems.width * ems.height >= min_area_dict_by_family[job.family]]
-                        batch.ems_list.sort(key=lambda e: e.width * e.height)
+                        batch.ems_list.sort(key=lambda item: item.width * item.height)
 
         for batch in batch_list:
             batch.update_by_placed_job_list()
@@ -90,9 +90,7 @@ class BFFPacker(BaseGrouper):
         job_x, job_y = ems_to_place_in.x, ems_to_place_in.y
         job_w, job_h = best_fit_info['width'], best_fit_info['height']
 
-        batch.placed_job_list.append(
-            PlacedJob(job, best_fit_info['rotation'], job_x, job_y, job_w, job_h)
-        )
+        batch.placed_job_list.append(PlacedJob(job, best_fit_info['rotation'], job_x, job_y))
         batch.family = job.family
 
         newly_generated_ems = []
@@ -128,20 +126,22 @@ class BFFPacker(BaseGrouper):
                 final_ems_list.append(ems1)
 
         batch.ems_list = final_ems_list
-        batch.ems_list.sort(key=lambda e: e.width * e.height)
+        batch.ems_list.sort(key=lambda item: item.width * item.height)
         batch.update_by_placed_job_list()
 
 
 class AdjustedBFFPacker(BFFPacker):
     @staticmethod
     def find_best_fit_in_batch_list(job, batch_list):
-        best_fit_info = None
         min_primary_metric = float('inf')
         min_secondary_metric = float('inf')
-        for i, batch in enumerate(batch_list):
+        best_fit_info = None
+        for i, batch in enumerate(sorted(batch_list,
+                                         key=lambda item: np.abs(np.average(item.due_date_list) - job.due_date)
+                                         if item.due_date_list else float('inf'))):
             if batch.family is not None and batch.family != job.family:
                 continue
-            for j, ems in enumerate(sorted(batch.ems_list, key=lambda k: k.width * k.height)):
+            for j, ems in enumerate(sorted(batch.ems_list, key=lambda item: item.width * item.height)):
                 for rotation in [False, True]:
                     job_w = job.width if not rotation else job.height
                     job_h = job.height if not rotation else job.width
@@ -151,10 +151,12 @@ class AdjustedBFFPacker(BFFPacker):
                         if min_primary_metric > primary_metric:
                             min_primary_metric = primary_metric
                             min_secondary_metric = secondary_metric
-                            best_fit_info = {'batch_idx': i, 'ems_idx': j, 'rotation': rotation,
+                            best_fit_info = {'batch_idx': batch.idx, 'ems_idx': j, 'rotation': rotation,
                                              'width': job_w, 'height': job_h}
                         elif min_primary_metric == primary_metric and min_secondary_metric > secondary_metric:
                             min_secondary_metric = secondary_metric
-                            best_fit_info = {'batch_idx': i, 'ems_idx': j, 'rotation': rotation,
+                            best_fit_info = {'batch_idx': batch.idx, 'ems_idx': j, 'rotation': rotation,
                                              'width': job_w, 'height': job_h}
+            if best_fit_info is not None:
+                return best_fit_info
         return best_fit_info

@@ -20,10 +20,10 @@ class Config:
         self.model_type = 'Sequential_Sequential'
         self.integrated_solver = 'CP'
         self.grouping_sequencer = 'LA'  # EDD, MS, SA, LA, RKGA, SA, LNS
-        self.grouper = 'BFF'  # BFF, ABFF
+        self.grouper = 'ABFF'  # BFF, ABFF
         self.integrated_grouper = 'CP'
-        self.scheduling_sequencer = 'EDD'  # EDD, GA, SA, LNS
-        self.scheduler = 'IBH'  # IBH, Backward
+        self.scheduling_sequencer = 'EDD'  # EDD, MB, GA, SA, LNS
+        self.scheduler = 'IBH'  # GL, IBH, Backward?
         self.integrated_scheduler = 'CP'
 
         current_time = time.localtime()

@@ -19,13 +19,13 @@ class SSTGroupingSequencer(BaseGroupingSequencer):
                       key=lambda i: job_list[i].due_date - job_list[i].release_date - job_list[i].p_time)
 
 
-class SAGroupginSequencer(BaseGroupingSequencer):
+class SAGroupingSequencer(BaseGroupingSequencer):
     """Area가 작은 순서대로 정렬"""
     def get_sequence_list(self, job_list: List[Job], machines) -> List[int]:
         return sorted(range(len(job_list)), key=lambda i: job_list[i].width * job_list[i].height)
 
 
-class LAGroupginSequencer(BaseGroupingSequencer):
+class LAGroupingSequencer(BaseGroupingSequencer):
     """Area가 큰 순서대로 정렬"""
     def get_sequence_list(self, job_list: List[Job], machines) -> List[int]:
         return sorted(range(len(job_list)),

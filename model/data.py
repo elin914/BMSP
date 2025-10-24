@@ -20,13 +20,16 @@ class Machine:
 
 
 class PlacedJob:
-    def __init__(self, job, rotation, x, y, width, height):
+    def __init__(self, job, rotation, x, y):
         self.job = job
         self.rotation = rotation
         self.x = x
         self.y = y
-        self.width = width
-        self.height = height
+        self.width = job.width
+        self.height = job.height
+        self.p_time = job.p_time
+        self.release_date = job.release_date
+        self.due_date = job.due_date
 
 
 class Batch:

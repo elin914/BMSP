@@ -8,12 +8,13 @@ from .integrated_schedulers import *
 
 integrated_solver_dispatcher = {'CP': CPSolver}
 grouping_sequencers_dispatcher = {'EDD': EDDGroupingSequencer, 'SST': SSTGroupingSequencer,
-                                  'SA': SAGroupginSequencer, 'LA': LAGroupginSequencer}
+                                  'SA': SAGroupingSequencer, 'LA': LAGroupingSequencer}
 grouper_dispatcher = {'BFF': BFFPacker, 'ABFF': AdjustedBFFPacker}
 integrated_grouper_dispatcher = {'CP': CPGrouper}
-scheduling_sequencer_dispatcher = {'EDD': EDDSchedulingSequencer}
-scheduler_dispatcher = {'IBH': IBHScheduler}
+scheduling_sequencer_dispatcher = {'EDD': EDDSchedulingSequencer, 'MB': MBSchedulingSequencer}
+scheduler_dispatcher = {'GL': GLScheduler, 'IBH': IBHScheduler}
 integrated_scheduler_dispatcher = {'CP': CPIntegratedScheduler}
+                                   # 'ATC': ATCIntegratedScheduler, 'COVERT': COVERTIntegratedScheduler}
 
 
 class IntegratedModel:
@@ -34,8 +35,8 @@ class SequentialGroupingSequentialSchedulingModel:
     def solve(self, job_list, machines):
         job_sequence_list = self.grouping_sequencer.get_sequence_list(job_list, machines)
         batch_list = self.grouper.create_batch_list(job_list, job_sequence_list, machines)
-        batch_sequence_list = self.scheduling_sequencer.get_sequence_list(batch_list, machines)
-        return self.scheduler.get_schedule(batch_sequence_list, machines)
+        batch_sequence_list = self.scheduling_sequencer.get_sequence_list(self.scheduler, batch_list, machines)
+        return self.scheduler.get_schedule(batch_list, batch_sequence_list, machines)
 
 
 class SequentialGroupingIntegratedSchedulingModel:
@@ -58,8 +59,8 @@ class IntegratedGroupingSequentialSchedulingModel:
 
     def solve(self, job_list, machines):
         batch_list = self.integrated_grouper.create_batch_list(job_list, machines)
-        batch_sequence_list = self.scheduling_sequencer.get_sequence_list(batch_list, machines)
-        return self.scheduler.get_schedule(batch_sequence_list, machines)
+        batch_sequence_list = self.scheduling_sequencer.get_sequence_list(self.scheduler, batch_list, machines)
+        return self.scheduler.get_schedule(batch_list, batch_sequence_list, machines)
 
 
 class IntegratedGroupingIntegratedSchedulingModel:
@@ -74,7 +75,6 @@ class IntegratedGroupingIntegratedSchedulingModel:
 
 def model_builder(config):
     model_type = config.model_type
-
     if model_type == 'Integrated':
         integrated_solver = integrated_solver_dispatcher[config.integrated_solver]()
         return IntegratedModel(integrated_solver)
