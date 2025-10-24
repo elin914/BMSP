@@ -7,10 +7,11 @@ from .schedulers import *
 from .integrated_schedulers import *
 
 integrated_solver_dispatcher = {'CP': CPSolver}
-grouping_sequencers_dispatcher = {'SPT': SPTSequencer, 'LPT': LPTSequencer, 'EDD': EDDSequencer, 'MS': MSSequencer}
+grouping_sequencers_dispatcher = {'EDD': EDDGroupingSequencer, 'SST': SSTGroupingSequencer,
+                                  'SA': SAGroupginSequencer, 'LA': LAGroupginSequencer}
 grouper_dispatcher = {'BFF': BFFPacker, 'ABFF': AdjustedBFFPacker}
 integrated_grouper_dispatcher = {'CP': CPGrouper}
-scheduling_sequencer_dispatcher = {'EDD': EDDSequencer}
+scheduling_sequencer_dispatcher = {'EDD': EDDSchedulingSequencer}
 scheduler_dispatcher = {'IBH': IBHScheduler}
 integrated_scheduler_dispatcher = {'CP': CPIntegratedScheduler}
 

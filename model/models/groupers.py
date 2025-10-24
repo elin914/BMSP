@@ -60,7 +60,6 @@ class BFFPacker(BaseGrouper):
 
     @staticmethod
     def find_best_fit_in_batch_list(job, batch_list):
-        # for _, batch in enumerate(batch_list):
         for _, batch in enumerate(sorted(batch_list,
                                          key=lambda item: np.abs(np.average(item.due_date_list) - job.due_date)
                                          if item.due_date_list else float('inf'))):
