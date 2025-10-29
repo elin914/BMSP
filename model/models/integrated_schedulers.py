@@ -1,11 +1,11 @@
-from typing import List
+from typing import List, Tuple
 from model.data import Batch
 
 
 class BaseIntegratedScheduler:
-    def get_schedule(self, job_list: List[Batch], machines): raise NotImplementedError  # return type은 향후 명시
+    def get_schedule(self, batch_list: List[Batch], machines) -> Tuple[List[int], int]: raise NotImplementedError
 
 
 class CPIntegratedScheduler(BaseIntegratedScheduler):
-    def get_schedule(self, job_list: List[Batch], machines):
+    def get_schedule(self, batch_list: List[Batch], machines):
         return True

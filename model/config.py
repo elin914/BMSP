@@ -22,8 +22,8 @@ class Config:
         self.grouping_sequencer = 'LA'  # EDD, MS, SA, LA, RKGA, SA, LNS
         self.grouper = 'ABFF'  # BFF, ABFF
         self.integrated_grouper = 'CP'
-        self.scheduling_sequencer = 'EDD'  # EDD, MB, GA, SA, LNS
-        self.scheduler = 'IBH'  # GL, IBH, Backward?
+        self.scheduling_sequencer = 'MB'  # EDD, MB, GA, SA, LNS
+        self.scheduler = 'GL'  # GL, IBH, Backward?
         self.integrated_scheduler = 'CP'
 
         current_time = time.localtime()

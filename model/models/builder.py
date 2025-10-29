@@ -33,7 +33,7 @@ class SequentialGroupingSequentialSchedulingModel:
         self.scheduler = scheduler
 
     def solve(self, job_list, machines):
-        job_sequence_list = self.grouping_sequencer.get_sequence_list(job_list, machines)
+        job_sequence_list = self.grouping_sequencer.get_sequence_list(self.grouper, job_list, machines)
         batch_list = self.grouper.create_batch_list(job_list, job_sequence_list, machines)
         batch_sequence_list = self.scheduling_sequencer.get_sequence_list(self.scheduler, batch_list, machines)
         return self.scheduler.get_schedule(batch_list, batch_sequence_list, machines)
@@ -46,7 +46,7 @@ class SequentialGroupingIntegratedSchedulingModel:
         self.integrated_scheduler = integrated_scheduler
 
     def solve(self, job_list, machines):
-        job_sequence_list = self.grouping_sequencer.get_sequence_list(job_list, machines)
+        job_sequence_list = self.grouping_sequencer.get_sequence_list(self.grouper, job_list, machines)
         batch_list = self.grouper.create_batch_list(job_list, job_sequence_list, machines)
         return self.integrated_scheduler.get_schedule(batch_list, machines)
 
