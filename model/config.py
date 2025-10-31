@@ -9,9 +9,9 @@ class Config:
 
         self.data_instance = {
             'size_type': 'A',  # A, B
-            'n_machines': 4,  # 3, 4, 5
-            'n_families': 6,  # 3, 6, 12
-            'total_n_jobs': 180,  # 60, 180, 300
+            'n_machines': 5,  # 3, 4, 5
+            'n_families': 12,  # 3, 6, 12
+            'total_n_jobs': 60,  # 60, 180, 300
             'alpha': 0.5,  # 0.25, 0.5, 0.75
             'beta': 0.5  # 0.25, 0.5, 0.75
         }
@@ -19,12 +19,13 @@ class Config:
         # Integrated, Sequential_Sequential, Sequential_Integrated, Integrated_Sequential, Integrated_Integrated
         self.model_type = 'Sequential_Sequential'
         self.integrated_solver = 'CP'
-        self.grouping_sequencer = 'LA'  # EDD, MS, SA, LA, RKGA, SA, LNS
+        self.grouping_sequencer = 'EDD'  # EDD, MS, SA, LA, RKGA, SA, LNS
         self.grouper = 'ABFF'  # BFF, ABFF
         self.integrated_grouper = 'CP'
         self.scheduling_sequencer = 'MB'  # EDD, MB, GA, SA, LNS
-        self.scheduler = 'GL'  # GL, IBH, Backward?
+        self.scheduler = 'IBH'  # GL, IBH
         self.integrated_scheduler = 'CP'
+        self.search_time = 300  # 미사용
 
         current_time = time.localtime()
         self.result_folder_path = '../results/{0}_{1}h_{2}m_{3}s'.format(time.strftime('%Y%m%d'),

@@ -6,8 +6,8 @@ import random
 def calculate_single_machine_tardiness(batch_sequence_list, batch_list):
     completion_time = 0
     tardiness = 0
-    for batch_idx in batch_sequence_list:
-        batch = batch_list[batch_idx]
+    for b_idx in batch_sequence_list:
+        batch = batch_list[b_idx]
         completion_time = max(batch.max_release_date, completion_time) + batch.processing_time
         for due_date in batch.due_date_list:
             tardiness += max(0, completion_time - due_date)
@@ -31,7 +31,8 @@ class GLScheduler(BaseScheduler):
             batch = batch_list[idx]
             # 모든 기계를 확인하여 이 배치를 가장 빨리 끝낼 수 있는 기계 탐색
             for m_idx in range(machines.n_machine):
-                completion_time = max(machine_available_time_list[m_idx], batch.max_release_date) + batch.processing_time
+                completion_time = (max(machine_available_time_list[m_idx], batch.max_release_date)
+                                   + batch.processing_time)
                 new_tardiness = 0
                 for due_date in batch.due_date_list:
                     new_tardiness += max(0, completion_time - due_date)
@@ -56,8 +57,8 @@ class IBHScheduler(BaseScheduler):
         schedule_list = [[] for _ in range(machines.n_machine)]
         machine_tardiness_list = [0] * machines.n_machine
 
-        for batch_idx in batch_sequence_list:
-            batch = batch_list[batch_idx]
+        for b_idx in batch_sequence_list:
+            batch = batch_list[b_idx]
             tardiness_dict = dict()
             for m_idx in range(machines.n_machine):
                 for insert_pos_idx in range(len(schedule_list[m_idx]) + 1):

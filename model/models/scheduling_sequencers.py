@@ -14,6 +14,6 @@ class EDDSchedulingSequencer(BaseSchedulingSequencer):
 
 
 class MBSchedulingSequencer(BaseSchedulingSequencer):
+    # most job first?
     def get_sequence_list(self, scheduler, batch_list: List[Batch], machines) -> List[int]:
         return sorted(range(len(batch_list)), key=lambda i: len(batch_list[i].placed_job_list), reverse=True)
-
