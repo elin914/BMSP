@@ -13,7 +13,7 @@ grouper_dispatcher = {'BFF': BFFPacker, 'ABFF': AdjustedBFFPacker}
 integrated_grouper_dispatcher = {'CP': CPGrouper}
 scheduling_sequencer_dispatcher = {'EDD': EDDSchedulingSequencer, 'MB': MBSchedulingSequencer}
 scheduler_dispatcher = {'GL': GLScheduler, 'IBH': IBHScheduler}
-integrated_scheduler_dispatcher = {'CP': CPIntegratedScheduler}
+integrated_scheduler_dispatcher = {'CP': CPIntegratedScheduler, 'CP2': CPIntegratedScheduler2}
                                    # 'ATC': ATCIntegratedScheduler, 'COVERT': COVERTIntegratedScheduler}
 
 
@@ -21,8 +21,8 @@ class IntegratedModel:
     def __init__(self, integrated_solver):
         self.integrated_solver = integrated_solver
 
-    def solve(self, job_list, machines):
-        return self.integrated_solver.get_schedule(job_list, machines)
+    def solve(self, cfg, job_list, machines):
+        return self.integrated_solver.get_schedule(cfg, job_list, machines)
 
 
 class SequentialGroupingSequentialSchedulingModel:
@@ -32,11 +32,11 @@ class SequentialGroupingSequentialSchedulingModel:
         self.scheduling_sequencer = scheduling_sequencer
         self.scheduler = scheduler
 
-    def solve(self, job_list, machines):
-        job_sequence_list = self.grouping_sequencer.get_sequence_list(self.grouper, job_list, machines)
-        batch_list = self.grouper.create_batch_list(job_list, job_sequence_list, machines)
-        batch_sequence_list = self.scheduling_sequencer.get_sequence_list(self.scheduler, batch_list, machines)
-        return self.scheduler.get_schedule(batch_list, batch_sequence_list, machines)
+    def solve(self, cfg, job_list, machines):
+        job_sequence_list = self.grouping_sequencer.get_sequence_list(cfg, self.grouper, job_list, machines)
+        batch_list = self.grouper.create_batch_list(cfg, job_list, job_sequence_list, machines)
+        batch_sequence_list = self.scheduling_sequencer.get_sequence_list(cfg, self.scheduler, batch_list, machines)
+        return self.scheduler.get_schedule(cfg, batch_list, batch_sequence_list, machines)
 
 
 class SequentialGroupingIntegratedSchedulingModel:
@@ -45,10 +45,10 @@ class SequentialGroupingIntegratedSchedulingModel:
         self.grouper = grouper
         self.integrated_scheduler = integrated_scheduler
 
-    def solve(self, job_list, machines):
-        job_sequence_list = self.grouping_sequencer.get_sequence_list(self.grouper, job_list, machines)
-        batch_list = self.grouper.create_batch_list(job_list, job_sequence_list, machines)
-        return self.integrated_scheduler.get_schedule(batch_list, machines)
+    def solve(self, cfg, job_list, machines):
+        job_sequence_list = self.grouping_sequencer.get_sequence_list(cfg, self.grouper, job_list, machines)
+        batch_list = self.grouper.create_batch_list(cfg, job_list, job_sequence_list, machines)
+        return self.integrated_scheduler.get_schedule(cfg, batch_list, machines)
 
 
 class IntegratedGroupingSequentialSchedulingModel:
@@ -57,10 +57,10 @@ class IntegratedGroupingSequentialSchedulingModel:
         self.scheduling_sequencer = scheduling_sequencer
         self.scheduler = scheduler
 
-    def solve(self, job_list, machines):
-        batch_list = self.integrated_grouper.create_batch_list(job_list, machines)
-        batch_sequence_list = self.scheduling_sequencer.get_sequence_list(self.scheduler, batch_list, machines)
-        return self.scheduler.get_schedule(batch_list, batch_sequence_list, machines)
+    def solve(self, cfg, job_list, machines):
+        batch_list = self.integrated_grouper.create_batch_list(cfg, job_list, machines)
+        batch_sequence_list = self.scheduling_sequencer.get_sequence_list(cfg, self.scheduler, batch_list, machines)
+        return self.scheduler.get_schedule(cfg, batch_list, batch_sequence_list, machines)
 
 
 class IntegratedGroupingIntegratedSchedulingModel:
@@ -68,35 +68,35 @@ class IntegratedGroupingIntegratedSchedulingModel:
         self.integrated_scheduler = integrated_scheduler
         self.integrated_grouper = integrated_grouper
 
-    def solve(self, job_list, machines):
-        batch_list = self.integrated_grouper.create_batch_list(job_list, machines)
-        return self.integrated_scheduler.get_schedule(batch_list, machines)
+    def solve(self, cfg, job_list, machines):
+        batch_list = self.integrated_grouper.create_batch_list(cfg, job_list, machines)
+        return self.integrated_scheduler.get_schedule(cfg, batch_list, machines)
 
 
-def model_builder(config):
-    model_type = config.model_type
+def model_builder(cfg):
+    model_type = cfg.model_type
     if model_type == 'Integrated':
-        integrated_solver = integrated_solver_dispatcher[config.integrated_solver]()
+        integrated_solver = integrated_solver_dispatcher[cfg.integrated_solver]()
         return IntegratedModel(integrated_solver)
     elif model_type == 'Sequential_Sequential':
-        grouping_sequencer = grouping_sequencers_dispatcher[config.grouping_sequencer]()
-        grouper = grouper_dispatcher[config.grouper]()
-        scheduling_sequencer = scheduling_sequencer_dispatcher[config.scheduling_sequencer]()
-        scheduler = scheduler_dispatcher[config.scheduler]()
+        grouping_sequencer = grouping_sequencers_dispatcher[cfg.grouping_sequencer]()
+        grouper = grouper_dispatcher[cfg.grouper]()
+        scheduling_sequencer = scheduling_sequencer_dispatcher[cfg.scheduling_sequencer]()
+        scheduler = scheduler_dispatcher[cfg.scheduler]()
         return SequentialGroupingSequentialSchedulingModel(grouping_sequencer, grouper, scheduling_sequencer, scheduler)
     elif model_type == 'Sequential_Integrated':
-        grouping_sequencer = grouping_sequencers_dispatcher[config.grouping_sequencer]()
-        grouper = grouper_dispatcher[config.grouper]()
-        integrated_scheduler = integrated_scheduler_dispatcher[config.integrated_scheduler]()
+        grouping_sequencer = grouping_sequencers_dispatcher[cfg.grouping_sequencer]()
+        grouper = grouper_dispatcher[cfg.grouper]()
+        integrated_scheduler = integrated_scheduler_dispatcher[cfg.integrated_scheduler]()
         return SequentialGroupingIntegratedSchedulingModel(grouping_sequencer, grouper, integrated_scheduler)
     elif model_type == 'Integrated_Sequential':
-        integrated_grouper = integrated_grouper_dispatcher[config.integrated_grouper]()
-        scheduling_sequencer = scheduling_sequencer_dispatcher[config.scheduling_sequencer]()
-        scheduler = scheduler_dispatcher[config.scheduler]()
+        integrated_grouper = integrated_grouper_dispatcher[cfg.integrated_grouper]()
+        scheduling_sequencer = scheduling_sequencer_dispatcher[cfg.scheduling_sequencer]()
+        scheduler = scheduler_dispatcher[cfg.scheduler]()
         return IntegratedGroupingSequentialSchedulingModel(integrated_grouper, scheduling_sequencer, scheduler)
     elif model_type == 'Integrated_Integrated':
-        integrated_grouper = integrated_grouper_dispatcher[config.integrated_grouper]()
-        integrated_scheduler = integrated_scheduler_dispatcher[config.integrated_scheduler]()
+        integrated_grouper = integrated_grouper_dispatcher[cfg.integrated_grouper]()
+        integrated_scheduler = integrated_scheduler_dispatcher[cfg.integrated_scheduler]()
         return IntegratedGroupingIntegratedSchedulingModel(integrated_grouper, integrated_scheduler)
     else:
         raise ValueError(f"지원하지 않는 모델 타입입니다: {model_type}")

@@ -4,13 +4,13 @@ from docplex.cp.model import *
 
 
 class BaseIntegratedGrouper:
-    def create_batch_list(self, job_list: List[Job], machines) -> List[Batch]: raise NotImplementedError
+    def create_batch_list(self, cfg, job_list: List[Job], machines) -> List[Batch]: raise NotImplementedError
 
 
 class CPGrouper(BaseIntegratedGrouper):
-    def create_batch_list(self, job_list: List[Job], machines) -> List[Batch]:
-        # 향후 초기 해 추가하
-        n_bin = 120
+    def create_batch_list(self, cfg, job_list: List[Job], machines) -> List[Batch]:
+        # 향후 초기 해 추가하기, 자동으로 변하도록 설정하기
+        n_bin = 30
         batch_list = list()
         model = CpoModel()
         bin_var_dict = dict()
@@ -37,32 +37,35 @@ class CPGrouper(BaseIntegratedGrouper):
             model.add(model.presence_of(x_var_list_dict[i][1]) == model.presence_of(y_var_list_dict[i][1]))
             model.add(model.alternative(x_var_dict[i], x_var_list_dict[i]))
             model.add(model.alternative(y_var_dict[i], y_var_list_dict[i]))
-        for i, job in enumerate(job_list):
+        delay_obj = 0
+        for i, job1 in enumerate(job_list):
             for j, job2 in enumerate(job_list):
-                if i == j:
-                    continue
-                if job.family != job2.family:
-                    model.add(bin_var_dict[i] != bin_var_dict[j])
-                else:
-                    model.add(
-                        model.any([
-                            bin_var_dict[i] != bin_var_dict[j],
-                            model.all([
-                                bin_var_dict[i] == bin_var_dict[j],
-                                model.any([
-                                    model.overlap_length(x_var_dict[i], x_var_dict[j]) == 0,
-                                    model.overlap_length(y_var_dict[i], y_var_dict[j]) == 0
+                if i < j:
+                    if job1.family != job2.family:
+                        model.add(bin_var_dict[i] != bin_var_dict[j])
+                    else:
+                        model.add(
+                            model.any([
+                                bin_var_dict[i] != bin_var_dict[j],
+                                model.all([
+                                    bin_var_dict[i] == bin_var_dict[j],
+                                    model.any([
+                                        model.overlap_length(x_var_dict[i], x_var_dict[j]) == 0,
+                                        model.overlap_length(y_var_dict[i], y_var_dict[j]) == 0
+                                    ])
                                 ])
                             ])
-                        ])
-                    )
+                        )
+                    if abs(job1.due_date - job2.due_date) >= 0 and job1.family == job2.family:
+                        delay_obj += abs(job1.due_date - job2.due_date) * (bin_var_dict[i] == bin_var_dict[j])
+
         bin_assinged_var_list = [model.binary_var() for _ in range(n_bin)]
         for i in range(len(job_list)):
             model.add(model.element(bin_assinged_var_list, bin_var_dict[i] - 1) == 1)
         # for b in range(1, n_bin):
         #     model.add(bin_assinged_var_list[b - 1] >= bin_assinged_var_list[b])
-        model.add(model.minimize(model.sum(bin_assinged_var_list)))
-        sol = model.solve(TimeLimit=3600, SearchType='IterativeDiving')
+        model.minimize(1000 * model.sum(bin_assinged_var_list) + delay_obj)
+        sol = model.solve(TimeLimit=300, SearchType='IterativeDiving')
 
         placed_job_list_dict = dict()
         for i, job in enumerate(job_list):
@@ -82,5 +85,14 @@ class CPGrouper(BaseIntegratedGrouper):
             batch.placed_job_list = placed_job_list
             batch.update_by_placed_job_list()
             batch_list.append(batch)
+
+        delay_obj = 0
+        for batch in batch_list:
+            batch_delay = 0
+            current_sum = 0
+            for i, date in enumerate(sorted(batch.due_date_list)):
+                batch_delay += i * date - current_sum
+                current_sum += date
+            delay_obj += batch_delay
 
         return batch_list

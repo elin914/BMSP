@@ -4,7 +4,7 @@ import numpy as np
 
 
 class BaseGrouper:
-    def create_batch_list(self, job_list: List[Job], job_sequence_list: List[int], machines) -> List[Batch]:
+    def create_batch_list(self, cfg, job_list: List[Job], job_sequence_list: List[int], machines) -> List[Batch]:
         raise NotImplementedError
 
 
@@ -17,7 +17,7 @@ class EMS:
 
 
 class BFFPacker(BaseGrouper):
-    def create_batch_list(self, job_list: List[Job], job_sequence_list: List[int], machines) -> List[Batch]:
+    def create_batch_list(self, cfg, job_list: List[Job], job_sequence_list: List[int], machines) -> List[Batch]:
         batch_list = list()
         min_area_dict_by_family = dict()
         job_list_by_family = dict()
@@ -56,6 +56,14 @@ class BFFPacker(BaseGrouper):
 
         for batch in batch_list:
             batch.update_by_placed_job_list()
+        delay_obj = 0
+        for batch in batch_list:
+            batch_delay = 0
+            current_sum = 0
+            for i, date in enumerate(sorted(batch.due_date_list)):
+                batch_delay += i * date - current_sum
+                current_sum += date
+            delay_obj += batch_delay
         return batch_list
 
     @staticmethod
@@ -70,9 +78,11 @@ class BFFPacker(BaseGrouper):
                 fit_rotated = (ems.width >= job.height and ems.height >= job.width)
 
                 if fit_normal and not fit_rotated:
-                    return {'batch_idx': batch.idx, 'ems_idx': j, 'rotation': False, 'width': job.width, 'height': job.height}
+                    return {'batch_idx': batch.idx, 'ems_idx': j, 'rotation': False,
+                            'width': job.width, 'height': job.height}
                 if not fit_normal and fit_rotated:
-                    return {'batch_idx': batch.idx, 'ems_idx': j, 'rotation': True, 'width': job.height, 'height': job.width}
+                    return {'batch_idx': batch.idx, 'ems_idx': j, 'rotation': True,
+                            'width': job.height, 'height': job.width}
                 if fit_normal and fit_rotated:
                     metric_normal = min(ems.width - job.width, ems.height - job.height)
                     metric_rotated = min(ems.width - job.height, ems.height - job.width)

@@ -1,11 +1,11 @@
-from typing import List
+from typing import List, Tuple
 from model.data import Job
 
 
 class BaseSolver:
-    def get_schedule(self, job_list: List[Job], machines): raise NotImplementedError  # return type은 향후 명시
+    def get_schedule(self, cfg, job_list: List[Job], machines) -> Tuple[List[int], int]: raise NotImplementedError
 
 
 class CPSolver(BaseSolver):
-    def get_schedule(self, job_list, machines):
+    def get_schedule(self, cfg, job_list, machines):
         pass

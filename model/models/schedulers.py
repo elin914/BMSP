@@ -15,12 +15,12 @@ def calculate_single_machine_tardiness(batch_sequence_list, batch_list):
 
 
 class BaseScheduler:
-    def get_schedule(self, batch_list: List[Batch], batch_sequence_list, machines) -> Tuple[List[int], int]:
+    def get_schedule(self, cfg, batch_list: List[Batch], batch_sequence_list, machines) -> Tuple[List[int], int]:
         raise NotImplementedError  # return type은 향후 명시
 
 
 class GLScheduler(BaseScheduler):
-    def get_schedule(self, batch_list: List[Batch], batch_sequence_list, machines):
+    def get_schedule(self, cfg, batch_list: List[Batch], batch_sequence_list, machines):
         machine_available_time_list = [0] * machines.n_machine
         schedule_list = [[] for _ in range(machines.n_machine)]
         total_tardiness = 0
@@ -53,7 +53,7 @@ class GLScheduler(BaseScheduler):
 
 
 class IBHScheduler(BaseScheduler):
-    def get_schedule(self, batch_list: List[Batch], batch_sequence_list, machines):
+    def get_schedule(self, cfg, batch_list: List[Batch], batch_sequence_list, machines):
         schedule_list = [[] for _ in range(machines.n_machine)]
         machine_tardiness_list = [0] * machines.n_machine
 
