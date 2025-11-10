@@ -11,13 +11,13 @@ class Config:
             'size_type': 'A',  # A, B
             'n_machines': 5,  # 3, 4, 5
             'n_families': 3,  # 3, 6, 12
-            'total_n_jobs': 300,  # 60, 180, 300
+            'total_n_jobs': 60,  # 60, 180, 300
             'alpha': 0.5,  # 0.25, 0.5, 0.75
             'beta': 0.5  # 0.25, 0.5, 0.75
         }
 
         # Integrated, Sequential_Sequential, Sequential_Integrated, Integrated_Sequential, Integrated_Integrated
-        self.model_type = 'Integrated_Integrated'
+        self.model_type = 'Sequential_Sequential'
         self.integrated_solver = 'CP'
         self.grouping_sequencer = 'OBRKGA'  # EDD, SST, SA, LA, RKGA, BRKGA, OBRKGA, SA, LNS
         self.grouper = 'ABFF'  # BFF, ABFF
