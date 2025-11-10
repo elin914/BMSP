@@ -7,6 +7,26 @@ class BaseGrouper:
     def create_batch_list(self, cfg, job_list: List[Job], job_sequence_list: List[int], machines) -> List[Batch]:
         raise NotImplementedError
 
+    @staticmethod
+    def get_obj(batch_list):
+        delay_obj = 0
+        for batch in batch_list:
+            batch_delay = 0
+            current_sum = 0
+            for i, date in enumerate(sorted(batch.due_date_list)):
+                batch_delay += i * date - current_sum
+                current_sum += date
+            delay_obj += batch_delay
+        return delay_obj
+
+    def calculate_fitness(self, job_sequence_list, job_list, machines, fitness_cache):
+        if tuple(job_sequence_list) in fitness_cache:
+            return fitness_cache[tuple(job_sequence_list)]
+        batch_list = self.create_batch_list(None, job_list, job_sequence_list, machines)
+        delay_obj = self.get_obj(batch_list)
+        fitness_cache[tuple(job_sequence_list)] = len(batch_list) * 10000 + delay_obj
+        return len(batch_list) * 10000 + delay_obj
+
 
 class EMS:
     def __init__(self, x, y, width, height):
@@ -56,14 +76,6 @@ class BFFPacker(BaseGrouper):
 
         for batch in batch_list:
             batch.update_by_placed_job_list()
-        delay_obj = 0
-        for batch in batch_list:
-            batch_delay = 0
-            current_sum = 0
-            for i, date in enumerate(sorted(batch.due_date_list)):
-                batch_delay += i * date - current_sum
-                current_sum += date
-            delay_obj += batch_delay
         return batch_list
 
     @staticmethod

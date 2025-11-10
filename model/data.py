@@ -71,10 +71,7 @@ class Data:
             width_list = np.random.randint(20, 81, size=cfg.data_instance['total_n_jobs'])
             height_list = np.random.randint(20, 81, size=cfg.data_instance['total_n_jobs'])
         area_list = width_list * height_list
-        temp = (np.sum(p_time_list) * np.average(area_list) /
-                # temp = (np.average(p_time_list * area_list) /
-                # temp = (np.sum(p_time_family_list) * np.average(area_list) /
-                (cfg.data_instance['n_machines'] * bin_size * bin_size))
+        temp = (np.sum(p_time_list) * np.average(area_list) / (cfg.data_instance['n_machines'] * bin_size * bin_size))
         release_date_list =\
             np.random.randint(0, max(1, int(cfg.data_instance['alpha'] * temp)) + 1,
                               size=cfg.data_instance['total_n_jobs'])

@@ -10,7 +10,7 @@ class BaseIntegratedGrouper:
 class CPGrouper(BaseIntegratedGrouper):
     def create_batch_list(self, cfg, job_list: List[Job], machines) -> List[Batch]:
         # 향후 초기 해 추가하기, 자동으로 변하도록 설정하기
-        n_bin = 30
+        n_bin = 300
         batch_list = list()
         model = CpoModel()
         bin_var_dict = dict()
@@ -59,13 +59,15 @@ class CPGrouper(BaseIntegratedGrouper):
                     if abs(job1.due_date - job2.due_date) >= 0 and job1.family == job2.family:
                         delay_obj += abs(job1.due_date - job2.due_date) * (bin_var_dict[i] == bin_var_dict[j])
 
-        bin_assinged_var_list = [model.binary_var() for _ in range(n_bin)]
-        for i in range(len(job_list)):
-            model.add(model.element(bin_assinged_var_list, bin_var_dict[i] - 1) == 1)
-        # for b in range(1, n_bin):
-        #     model.add(bin_assinged_var_list[b - 1] >= bin_assinged_var_list[b])
-        model.minimize(1000 * model.sum(bin_assinged_var_list) + delay_obj)
-        sol = model.solve(TimeLimit=300, SearchType='IterativeDiving')
+        # bin_assinged_var_list = [model.binary_var() for _ in range(n_bin)]
+        # for i in range(len(job_list)):
+        #     model.add(model.element(bin_assinged_var_list, bin_var_dict[i] - 1) == 1)
+        # model.minimize(10000 * model.sum(bin_assinged_var_list) + delay_obj)
+
+        num_bin_used = model.integer_var(0, n_bin)
+        model.add(num_bin_used == model.count_different(list(bin_var_dict.values())))
+        model.minimize(10000 * num_bin_used + delay_obj)
+        sol = model.solve(TimeLimit=1800, SearchType='IterativeDiving')
 
         placed_job_list_dict = dict()
         for i, job in enumerate(job_list):
@@ -94,5 +96,5 @@ class CPGrouper(BaseIntegratedGrouper):
                 batch_delay += i * date - current_sum
                 current_sum += date
             delay_obj += batch_delay
-
+        print(len(batch_list), delay_obj)
         return batch_list

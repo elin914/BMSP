@@ -1,22 +1,28 @@
 from typing import List, Tuple
 from model.data import Batch
-import random
-
-
-def calculate_single_machine_tardiness(batch_sequence_list, batch_list):
-    completion_time = 0
-    tardiness = 0
-    for b_idx in batch_sequence_list:
-        batch = batch_list[b_idx]
-        completion_time = max(batch.max_release_date, completion_time) + batch.processing_time
-        for due_date in batch.due_date_list:
-            tardiness += max(0, completion_time - due_date)
-    return tardiness
 
 
 class BaseScheduler:
     def get_schedule(self, cfg, batch_list: List[Batch], batch_sequence_list, machines) -> Tuple[List[int], int]:
         raise NotImplementedError  # return type은 향후 명시
+
+    @staticmethod
+    def calculate_single_machine_tardiness(batch_sequence_list, batch_list):
+        completion_time = 0
+        tardiness = 0
+        for b_idx in batch_sequence_list:
+            batch = batch_list[b_idx]
+            completion_time = max(batch.max_release_date, completion_time) + batch.processing_time
+            for due_date in batch.due_date_list:
+                tardiness += max(0, completion_time - due_date)
+        return tardiness
+
+    def calculate_fitness(self, batch_sequence_list, batch_list, machines, fitness_cache):
+        if tuple(batch_sequence_list) in fitness_cache:
+            return fitness_cache[tuple(batch_sequence_list)]
+        schedule_list, fitness = self.get_schedule(None, batch_list, batch_sequence_list, machines)
+        fitness_cache[tuple(batch_sequence_list)] = fitness
+        return fitness
 
 
 class GLScheduler(BaseScheduler):
@@ -64,12 +70,12 @@ class IBHScheduler(BaseScheduler):
                 for insert_pos_idx in range(len(schedule_list[m_idx]) + 1):
                     temp_schedule = schedule_list[m_idx][:]
                     temp_schedule.insert(insert_pos_idx, batch.idx)
-                    temp_tardiness = calculate_single_machine_tardiness(temp_schedule, batch_list)
+                    temp_tardiness = self.calculate_single_machine_tardiness(temp_schedule, batch_list)
                     tardiness_dict[m_idx, insert_pos_idx] = temp_tardiness - machine_tardiness_list[m_idx]
             min_tardiness = min(tardiness_dict.values())
             (m_idx, insert_pos_idx) =\
-                random.choice([key for key, value in tardiness_dict.items() if value == min_tardiness])
+                sorted([key for key, value in tardiness_dict.items() if value == min_tardiness])[0]
             schedule_list[m_idx].insert(insert_pos_idx, batch.idx)
-            machine_tardiness_list[m_idx] = calculate_single_machine_tardiness(schedule_list[m_idx], batch_list)
+            machine_tardiness_list[m_idx] = self.calculate_single_machine_tardiness(schedule_list[m_idx], batch_list)
 
         return schedule_list, sum(machine_tardiness_list)

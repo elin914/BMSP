@@ -1,5 +1,5 @@
 from .integrated_solver import *
-from .gropuing_sequencers import *
+from .grouping_sequencers import *
 from .groupers import *
 from .integrated_groupers import *
 from .scheduling_sequencers import *
@@ -8,10 +8,14 @@ from .integrated_schedulers import *
 
 integrated_solver_dispatcher = {'CP': CPSolver}
 grouping_sequencers_dispatcher = {'EDD': EDDGroupingSequencer, 'SST': SSTGroupingSequencer,
-                                  'SA': SAGroupingSequencer, 'LA': LAGroupingSequencer}
+                                  'SA': SAGroupingSequencer, 'LA': LAGroupingSequencer,
+                                  'RKGA': RKGAGroupingSequencer, 'BRKGA': BRKGAGroupingSequencer,
+                                  'OBRKGA': OBRKGAGroupingSequencer}
 grouper_dispatcher = {'BFF': BFFPacker, 'ABFF': AdjustedBFFPacker}
 integrated_grouper_dispatcher = {'CP': CPGrouper}
-scheduling_sequencer_dispatcher = {'EDD': EDDSchedulingSequencer, 'MB': MBSchedulingSequencer}
+scheduling_sequencer_dispatcher = {'EDD': EDDSchedulingSequencer, 'MB': MBSchedulingSequencer,
+                                   'RKGA': RKGASchedulingSequencer, 'BRKGA': BRKGASchedulingSequencer,
+                                   'OBRKGA': OBRKGASchedulingSequencer}
 scheduler_dispatcher = {'GL': GLScheduler, 'IBH': IBHScheduler}
 integrated_scheduler_dispatcher = {'CP': CPIntegratedScheduler, 'CP2': CPIntegratedScheduler2}
                                    # 'ATC': ATCIntegratedScheduler, 'COVERT': COVERTIntegratedScheduler}

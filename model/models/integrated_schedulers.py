@@ -1,7 +1,7 @@
 from typing import List, Tuple
 from model.data import Batch
 from docplex.cp.model import *
-from .schedulers import calculate_single_machine_tardiness
+from .schedulers import BaseScheduler
 
 
 class BaseIntegratedScheduler:
@@ -11,7 +11,7 @@ class BaseIntegratedScheduler:
 class CPIntegratedScheduler(BaseIntegratedScheduler):
     def get_schedule(self, cfg, batch_list: List[Batch], machines):
         model = CpoModel()
-        end_time = max([max(batch.due_date_list) for batch in batch_list]) + 1000
+        end_time = max([max(batch.due_date_list) for batch in batch_list]) + 10000
 
         batch_var_dict = dict()
         machine_interval_lists = [[] for _ in range(machines.n_machine)]
@@ -34,7 +34,7 @@ class CPIntegratedScheduler(BaseIntegratedScheduler):
             model.add(model.no_overlap(machine_interval_lists[m_idx]))
 
         model.add(model.minimize(obj))
-        sol = model.solve(TimeLimit=300, SearchType='IterativeDiving')
+        sol = model.solve(TimeLimit=1800, SearchType='IterativeDiving')
 
         machine_solution_list = [dict() for _ in range(machines.n_machine)]
         schedule_list = [[] for _ in range(machines.n_machine)]
@@ -44,7 +44,7 @@ class CPIntegratedScheduler(BaseIntegratedScheduler):
         total_tardiness = 0
         for m_idx, solution_list in enumerate(machine_solution_list):
             schedule_list[m_idx] = [key for key, _ in sorted(solution_list.items(), key=lambda item: item[1])]
-            total_tardiness += calculate_single_machine_tardiness(schedule_list[m_idx], batch_list)
+            total_tardiness += BaseScheduler.calculate_single_machine_tardiness(schedule_list[m_idx], batch_list)
         return schedule_list, total_tardiness
 
 
@@ -99,5 +99,5 @@ class CPIntegratedScheduler2(BaseIntegratedScheduler):
         total_tardiness = 0
         for m_idx, solution_list in enumerate(machine_solution_list):
             schedule_list[m_idx] = [key for key, _ in sorted(solution_list.items(), key=lambda item: item[1])]
-            total_tardiness += calculate_single_machine_tardiness(schedule_list[m_idx], batch_list)
+            total_tardiness += BaseScheduler.calculate_single_machine_tardiness(schedule_list[m_idx], batch_list)
         return schedule_list, total_tardiness
