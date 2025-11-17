@@ -13,19 +13,21 @@ class BaseGrouper:
         for batch in batch_list:
             batch_delay = 0
             current_sum = 0
-            for i, date in enumerate(sorted(batch.due_date_list)):
+            # for i, date in enumerate(sorted(batch.due_date_list)):
+            for i, date in enumerate(sorted([placed_job.release_date for placed_job in batch.placed_job_list])):
                 batch_delay += i * date - current_sum
                 current_sum += date
             delay_obj += batch_delay
         return delay_obj
 
-    def calculate_fitness(self, job_sequence_list, job_list, machines, fitness_cache):
+    def calculate_fitness(self, cfg, job_sequence_list, job_list, machines, fitness_cache):
         if tuple(job_sequence_list) in fitness_cache:
             return fitness_cache[tuple(job_sequence_list)]
-        batch_list = self.create_batch_list(None, job_list, job_sequence_list, machines)
-        delay_obj = self.get_obj(batch_list)
-        fitness_cache[tuple(job_sequence_list)] = len(batch_list) * 10000 + delay_obj
-        return len(batch_list) * 10000 + delay_obj
+        batch_list, fitness = self.create_batch_list(cfg, job_list, job_sequence_list, machines)
+        fitness_cache[tuple(job_sequence_list)] = len(batch_list) * 10000 + fitness
+        return len(batch_list) * 10000 + fitness
+        # fitness_cache[tuple(job_sequence_list)] = len(batch_list) * 10000 + delay_obj
+        # return len(batch_list) * 10000 + delay_obj
 
 
 class EMS:
@@ -76,7 +78,9 @@ class BFFPacker(BaseGrouper):
 
         for batch in batch_list:
             batch.update_by_placed_job_list()
-        return batch_list
+            # batch_list, due date가 큰 순으로 정렬
+        batch_sequence_list = cfg.heuristic_scheduling_sequencer[0].get_sequence_list(cfg, batch_list, machines)
+        return batch_list, cfg.local_scheduler.get_schedule(None, batch_list, batch_sequence_list, machines)[1]
 
     @staticmethod
     def find_best_fit_in_batch_list(job, batch_list):

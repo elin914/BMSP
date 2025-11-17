@@ -15,6 +15,5 @@ if __name__ == '__main__':
     model = model_builder(cfg)
     schedule_list, total_tardiness = model.solve(cfg, data.job_list, data.machines)
 
-    print(schedule_list)
-    print(len(schedule_list), total_tardiness)
+    print(sum(len(schedule) for schedule in schedule_list), total_tardiness)
     print(time.time() - start_time)

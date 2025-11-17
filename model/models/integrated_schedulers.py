@@ -1,103 +1,83 @@
 from typing import List, Tuple
 from model.data import Batch
 from docplex.cp.model import *
-from .schedulers import BaseScheduler
+from docplex.cp.solver.solver_listener import CpoSolverListener
 
 
 class BaseIntegratedScheduler:
     def get_schedule(self, cfg, batch_list: List[Batch], machines) -> Tuple[List[int], int]: raise NotImplementedError
 
 
+class ObjectiveHistoryListener(CpoSolverListener):
+    def __init__(self):
+        super().__init__()
+        self.obj_history = []
+
+    def new_result(self, solver, sol):
+        current_obj = sol.get_objective_value()
+        self.obj_history.append(current_obj)
+
+
 class CPIntegratedScheduler(BaseIntegratedScheduler):
     def get_schedule(self, cfg, batch_list: List[Batch], machines):
-        model = CpoModel()
-        end_time = max([max(batch.due_date_list) for batch in batch_list]) + 10000
+        heuristic_sequencers = cfg.heuristic_scheduling_sequencer
+        scheduler = cfg.local_scheduler
+        best_schedule_list = list()
+        best_fitness = float('inf')
+        best_sequencer = None
+        for sequencer in heuristic_sequencers:
+            batch_sequence_list = sequencer.get_sequence_list(None, batch_list, None)
+            current_schedule_list, current_fitness =\
+                scheduler.get_schedule(cfg, batch_list, batch_sequence_list, machines)
+            if current_fitness < best_fitness:
+                best_schedule_list = current_schedule_list
+                best_fitness = current_fitness
+                best_sequencer = sequencer
 
+        model = CpoModel()
+        end_time = max(batch_list[b_idx].end_time for schedule in best_schedule_list for b_idx in schedule)
         batch_var_dict = dict()
-        machine_interval_lists = [[] for _ in range(machines.n_machine)]
-        batch_presence_of_lists = [[] for _ in range(len(batch_list))]
         obj = 0
-
+        load_function = model.step_at(0, 0)
         for b_idx, batch in enumerate(batch_list):
-            for m_idx in range(machines.n_machine):
-                var = model.interval_var(start=(batch.max_release_date, end_time),
-                                         size=batch.processing_time, optional=True)
-                batch_var_dict[(b_idx, m_idx)] = var
-                machine_interval_lists[m_idx].append(var)
-                batch_presence_of_lists[b_idx].append(model.presence_of(var))
-                obj += model.sum([model.presence_of(var) * model.max(0, model.end_of(var) - due_date)
-                                  for due_date in batch_list[b_idx].due_date_list])
-        for var_list in batch_presence_of_lists:
-            model.add(model.sum(var_list) == 1)
-
-        for m_idx in range(machines.n_machine):
-            model.add(model.no_overlap(machine_interval_lists[m_idx]))
-
+            var = model.interval_var(start=(batch.max_release_date, end_time), size=batch.processing_time)
+            load_function += model.pulse(var, 1)
+            obj += model.sum([model.abs(due_date - model.end_of(var)) for due_date in batch.due_date_list])
+            # for _, var2 in batch_var_dict.items():
+            #     model.add(model.start_of(var) != model.start_of(var2))
+            batch_var_dict[b_idx] = var
+        all_start_times = [model.start_of(var) for var in batch_var_dict.values()]
+        model.add(model.all_diff(all_start_times))
+        model.add(load_function <= machines.n_machine)
         model.add(model.minimize(obj))
-        sol = model.solve(TimeLimit=1800, SearchType='IterativeDiving')
 
-        machine_solution_list = [dict() for _ in range(machines.n_machine)]
-        schedule_list = [[] for _ in range(machines.n_machine)]
-        for (b_idx, m_idx), var in batch_var_dict.items():
-            if sol.get_var_solution(var).presence:
-                machine_solution_list[m_idx][b_idx] = sol.get_var_solution(var).get_start()
-        total_tardiness = 0
-        for m_idx, solution_list in enumerate(machine_solution_list):
-            schedule_list[m_idx] = [key for key, _ in sorted(solution_list.items(), key=lambda item: item[1])]
-            total_tardiness += BaseScheduler.calculate_single_machine_tardiness(schedule_list[m_idx], batch_list)
-        return schedule_list, total_tardiness
+        obj_listener = ObjectiveHistoryListener()
+        model.add_solver_listener(obj_listener)
 
+        if cfg.use_starting_point:
+            batch_sequence_list = best_sequencer.get_sequence_list(None, batch_list, None)
+            best_schedule_list, best_fitness = \
+                scheduler.get_schedule(cfg, batch_list, batch_sequence_list, machines)
+            start_sol = CpoModelSolution()
+            for b_idx, batch in enumerate(batch_list):
+                start_sol.add_interval_var_solution(batch_var_dict[b_idx], start=batch.start_time)
+            model.set_starting_point(start_sol)
 
-class CPIntegratedScheduler2(BaseIntegratedScheduler):
-    """
-    integer로 변형한 함수인데 성능이 별로임...
-    """
-    def get_schedule(self, cfg, batch_list: List[Batch], machines):
-        model = CpoModel()
-        machine_var_dict = dict()
-        sequence_var_dict = dict()
-        completion_var_dict = dict()
-        tardiness_var_list = list()
-        max_completion = int(sum(b.processing_time for b in batch_list) / 5)
-        for b_idx, batch in enumerate(batch_list):
-            machine_var = model.integer_var(1, machines.n_machine)
-            machine_var_dict[b_idx] = machine_var
-            batch_sequence_var = model.integer_var(1, len(batch_list))
-            sequence_var_dict[b_idx] = batch_sequence_var
-            completion_var = model.integer_var(batch.max_release_date, max_completion)
-            completion_var_dict[b_idx] = completion_var
-            for placed_job in batch.placed_job_list:
-                tardiness_var = model.integer_var(0, max_completion)
-                model.add(tardiness_var >= completion_var - placed_job.due_date)
-                tardiness_var_list.append(tardiness_var)
+        sol = model.solve(TimeLimit=cfg.cp_search_time_limit, SearchType='IterativeDiving')
 
-        for b_idx1, batch1 in enumerate(batch_list):
-            for b_idx2, batch2 in enumerate(batch_list):
-                if b_idx1 < b_idx2:
-                    model.add(model.any([
-                        machine_var_dict[b_idx1] != machine_var_dict[b_idx2],
-                        model.all([
-                            machine_var_dict[b_idx1] == machine_var_dict[b_idx2],
-                            sequence_var_dict[b_idx1] != sequence_var_dict[b_idx2]
-                        ])
-                    ]))
-                if b_idx1 != b_idx2:
-                    model.add(model.any([
-                        model.any([machine_var_dict[b_idx1] != machine_var_dict[b_idx2],
-                                  sequence_var_dict[b_idx1] >= sequence_var_dict[b_idx2]]),
-                        completion_var_dict[b_idx2] >= completion_var_dict[b_idx1] + batch2.processing_time
-                    ]))
-        model.minimize(model.sum(tardiness_var_list))
-
-        sol = model.solve(TimeLimit=300, SearchType='IterativeDiving')
-        machine_solution_list = [dict() for _ in range(machines.n_machine)]
-        schedule_list = [[] for _ in range(machines.n_machine)]
-        for b_idx, batch in enumerate(batch_list):
-            m_idx = sol.get_var_solution(machine_var_dict[b_idx]).get_value()
-            s_idx = sol.get_var_solution(sequence_var_dict[b_idx]).get_value()
-            machine_solution_list[m_idx - 1][b_idx] = s_idx
-        total_tardiness = 0
-        for m_idx, solution_list in enumerate(machine_solution_list):
-            schedule_list[m_idx] = [key for key, _ in sorted(solution_list.items(), key=lambda item: item[1])]
-            total_tardiness += BaseScheduler.calculate_single_machine_tardiness(schedule_list[m_idx], batch_list)
-        return schedule_list, total_tardiness
+        if sol:
+            print(f"Final objective value: {sol.get_objective_value()}")
+            print("Objective value history (변화 과정):")
+            print(obj_listener.obj_history)
+            schedule_list = [[] for _ in range(machines.n_machine)]
+            total_fitness = 0
+            for b_idx, var in batch_var_dict.items():
+                batch = batch_list[b_idx]
+                batch.start_time = sol.get_var_solution(var).get_start()
+                batch.end_time = sol.get_var_solution(var).get_end()
+                batch.delay_time = sum(abs(batch.end_time - due_date) for due_date in batch.due_date_list)
+                total_fitness += batch.delay_time
+            schedule_list[0] = sorted(range(len(batch_list)), key=lambda i: batch_list[i].end_time)
+            return schedule_list, total_fitness
+        else:
+            return best_schedule_list, best_fitness

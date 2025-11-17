@@ -43,11 +43,17 @@ class Batch:
         self.processing_time = None
         self.max_release_date = None
         self.due_date_list = list()
+        self.med_due_date = None
+        self.start_time = None
+        self.end_time = None
+        self.delay_time = None
 
     def update_by_placed_job_list(self):
         self.processing_time = self.placed_job_list[0].job.p_time
         self.max_release_date = max([placedjob.release_date for placedjob in self.placed_job_list])
         self.due_date_list = [placedjob.due_date for placedjob in self.placed_job_list]
+        self.med_due_date = int(np.median(self.due_date_list)) if len(self.due_date_list) % 2\
+            else sorted(self.due_date_list)[len(self.due_date_list) // 2]
 
 
 class Data:

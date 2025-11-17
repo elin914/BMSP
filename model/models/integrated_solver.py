@@ -9,3 +9,8 @@ class BaseSolver:
 class CPSolver(BaseSolver):
     def get_schedule(self, cfg, job_list, machines):
         pass
+
+
+class GASolver(BaseSolver):
+    def get_schedule(self, cfg, job_list, machines):
+        pass
