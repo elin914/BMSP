@@ -124,7 +124,7 @@ class BackWardScheduler(BaseScheduler):
                     if 0 <= slack_time <= best_slack_time:
                         best_m_idx = m_idx
                         best_slack_time = slack_time
-                if best_m_idx:
+                if best_m_idx is not None:
                     break
                 else:
                     ideal_start -= 1

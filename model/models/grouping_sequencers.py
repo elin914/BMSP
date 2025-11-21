@@ -3,6 +3,8 @@ from model.data import Job
 import random
 import numpy as np
 from model.utils import find_next_prime
+import multiprocessing
+from multiprocessing import Pool
 
 
 class BaseGroupingSequencer:
@@ -35,6 +37,14 @@ class LAGroupingSequencer(BaseGroupingSequencer):
                       key=lambda i: job_list[i].width * job_list[i].height, reverse=True)
 
 
+def worker_fitness_calculation(args):
+    chromosome, list_len, cfg, evaluator, data_list, machines = args
+    decoded_seq = RKGAGroupingSequencer.decode_chromosome(list_len, chromosome)
+    seq_tuple = tuple(decoded_seq)
+    fitness = evaluator.calculate_fitness(cfg, decoded_seq, data_list, machines, {})
+    return chromosome, fitness, seq_tuple
+
+
 class RKGAGroupingSequencer(BaseGroupingSequencer):
     def get_sequence_list(self, cfg, job_list: List[Job], machines) -> List[int]:
         param = cfg.GAgrouper_parameter
@@ -51,28 +61,43 @@ class RKGAGroupingSequencer(BaseGroupingSequencer):
                                                 heuristic_sequencers, fitness_cache)
 
         early_stop_count = 0
-        for gen in range(param['generations']):
-            evaluated_population = [
-                (chromosome, evaluator.calculate_fitness(cfg, self.decode_chromosome(list_len, chromosome),
-                                                         data_list, machines, fitness_cache))
-                for chromosome in population
-            ]
-            evaluated_population.sort(key=lambda x: x[1])
-            current_best_chromosome, current_best_fitness = evaluated_population[0]
-            if current_best_fitness < best_fitness:
-                best_fitness = current_best_fitness
-                best_sequence = self.decode_chromosome(list_len, current_best_chromosome)
-                early_stop_count = 0
-            else:
-                early_stop_count += 1
-            new_population = []
-            elite_list = [chromosome for chromosome, fitness
-                          in evaluated_population[:int(param['population_size'] * param['elite_rate'])]]
-            new_population.extend(elite_list)
-            population = self.generate_new_population(new_population, evaluated_population, elite_list, param)
-            print(f"RKGA Gen {gen} Best Fitness: {best_fitness}")
-            if early_stop_count >= param['early_stop_count']:
-                return best_sequence
+        with Pool(processes=None, maxtasksperchild=100) as pool:
+            for gen in range(param['generations']):
+                evaluated_population = []
+                to_calculate_args = []
+                for chromosome in population:
+                    decoded_seq = self.decode_chromosome(list_len, chromosome)
+                    seq_key = tuple(decoded_seq)
+                    if seq_key in fitness_cache:
+                        fit = fitness_cache[seq_key]
+                        evaluated_population.append((chromosome, fit))
+                    else:
+                        to_calculate_args.append(
+                            (chromosome, list_len, cfg, evaluator, data_list, machines)
+                        )
+                if len(to_calculate_args) > 0:
+                    results = pool.map(worker_fitness_calculation, to_calculate_args)
+                    for chromo, fit, key in results:
+                        evaluated_population.append((chromo, fit))
+                        fitness_cache[key] = fit
+
+                evaluated_population.sort(key=lambda x: x[1])
+                current_best_chromosome, current_best_fitness = evaluated_population[0]
+                if current_best_fitness < best_fitness:
+                    best_fitness = current_best_fitness
+                    best_sequence = self.decode_chromosome(list_len, current_best_chromosome)
+                    early_stop_count = 0
+                else:
+                    early_stop_count += 1
+                new_population = []
+                elite_list = [chromosome for chromosome, fitness
+                              in evaluated_population[:int(param['population_size'] * param['elite_rate'])]]
+                new_population.extend(elite_list)
+                population = self.generate_new_population(new_population, evaluated_population, elite_list, param)
+                print(f"RKGA Gen {gen} Best Fitness: {best_fitness}")
+                if early_stop_count >= param['early_stop_count']:
+                    break
+        cfg.best_fitness = best_fitness
         return best_sequence
 
     @staticmethod
@@ -171,7 +196,7 @@ class OBRKGAGroupingSequencer(BRKGAGroupingSequencer):
 
         q_level = find_next_prime(len(data_list))
         m_rows = q_level ** 2
-        sample_size = min(param['population_size'] * 10, m_rows)
+        sample_size = min(3000, m_rows)
         sample_indices = np.sort(np.random.choice(m_rows, sample_size, replace=False))
         c1_base = sample_indices // q_level
         c2_base = sample_indices % q_level
@@ -183,11 +208,18 @@ class OBRKGAGroupingSequencer(BRKGAGroupingSequencer):
             oed_table[:, j] = (c1_base + (j - 1) * c2_base) % q_level
         sampled_population = (oed_table / (q_level - 1)).tolist()
         if param['population_size'] - len(init_population) < len(sampled_population):
-            evaluated_samples = [
-                (chromosome, evaluator.calculate_fitness(cfg, self.decode_chromosome(len(data_list), chromosome),
-                                                         data_list, machines, fitness_cache))
+            list_len = len(data_list)
+            to_calc_args = [
+                (chromosome, list_len, cfg, evaluator, data_list, machines)
                 for chromosome in sampled_population
             ]
+            with Pool() as pool:
+                results = pool.map(worker_fitness_calculation, to_calc_args)
+            evaluated_samples = []
+            for chromo, fit, key in results:
+                evaluated_samples.append((chromo, fit))
+                fitness_cache[key] = fit
+
             evaluated_samples.sort(key=lambda x: x[1])
             num_to_add = param['population_size'] - len(init_population)
             best_samples = [chromo for chromo, fit in evaluated_samples[:num_to_add]]
