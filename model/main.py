@@ -11,7 +11,8 @@ if __name__ == '__main__':
     cfg = Config()
     set_random_seed(cfg.random_seed)
     data = Data()
-    data.make_data(cfg)
+    # data.make_data(cfg)
+    data.load_data(cfg)
     model = model_builder(cfg)
     schedule_list, total_tardiness = model.solve(cfg, data.job_list, data.machines)
 

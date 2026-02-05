@@ -10,15 +10,17 @@ integrated_solver_dispatcher = {'CP': CPSolver}
 grouping_sequencers_dispatcher = {'EDD': EDDGroupingSequencer, 'SST': SSTGroupingSequencer,
                                   'SA': SAGroupingSequencer, 'LA': LAGroupingSequencer,
                                   'RKGA': RKGAGroupingSequencer, 'BRKGA': BRKGAGroupingSequencer,
-                                  'OBRKGA': OBRKGAGroupingSequencer}
+                                  'OBRKGA': OBRKGAGroupingSequencer,
+                                  'SimA': SimAGroupingSequencer, 'Tabu': TabuGroupingSequencer}
 grouper_dispatcher = {'BFF': BFFPacker, 'ABFF': AdjustedBFFPacker}
 integrated_grouper_dispatcher = {'CP': CPGrouper}
 scheduling_sequencer_dispatcher = {'LDD': LDDSchedulingSequencer,
                                    'EDD': EDDSchedulingSequencer, 'MB': MBSchedulingSequencer,
                                    'RKGA': RKGASchedulingSequencer, 'BRKGA': BRKGASchedulingSequencer,
                                    'OBRKGA': OBRKGASchedulingSequencer}
-scheduler_dispatcher = {'GL': GLScheduler, 'IBH': IBHScheduler, 'BW': BackWardScheduler}
-integrated_scheduler_dispatcher = {'CP': CPIntegratedScheduler}
+scheduler_dispatcher = {'GL': GLScheduler, 'IBH': IBHScheduler, 'BW': BackWardScheduler,
+                        'RBW': RealBackWardScheduler}
+integrated_scheduler_dispatcher = {'CP': CPIntegratedScheduler, 'RCP': RealCPIntegratedScheduler}
                                    # 'ATC': ATCIntegratedScheduler, 'COVERT': COVERTIntegratedScheduler}
 
 

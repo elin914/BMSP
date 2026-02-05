@@ -7,18 +7,33 @@ class BaseGrouper:
     def create_batch_list(self, cfg, job_list: List[Job], job_sequence_list: List[int], machines) -> List[Batch]:
         raise NotImplementedError
 
-    @staticmethod
-    def get_obj(batch_list):
-        delay_obj = 0
-        for batch in batch_list:
-            batch_delay = 0
-            current_sum = 0
-            # for i, date in enumerate(sorted(batch.due_date_list)):
-            for i, date in enumerate(sorted([placed_job.release_date for placed_job in batch.placed_job_list])):
-                batch_delay += i * date - current_sum
-                current_sum += date
-            delay_obj += batch_delay
-        return delay_obj
+    # @staticmethod
+    # def get_obj(batch_list):
+    #     delay_obj = 0
+    #     for batch in batch_list:
+    #         batch_delay = 0
+    #         current_sum = 0
+    #         for i, date in enumerate(sorted(batch.due_date_list)):
+    #         # for i, date in enumerate(sorted([placed_job.release_date for placed_job in batch.placed_job_list])):
+    #             batch_delay += i * date - current_sum
+    #             current_sum += date
+    #         delay_obj += batch_delay
+    #     return delay_obj
+
+    # @staticmethod
+    # def get_obj(batch_list):
+    #     delay_obj = 0
+    #     for batch in batch_list:
+    #         d_dates = sorted(batch.due_date_list)
+    #         r_dates = sorted([job.release_date for job in batch.placed_job_list])
+    #         current_sum_d = 0
+    #         current_sum_r = 0
+    #         for i, (d_date, r_date) in enumerate(zip(d_dates, r_dates)):
+    #             delay_obj += (i * d_date - current_sum_d)
+    #             current_sum_d += d_date
+    #             delay_obj += (i * r_date - current_sum_r)
+    #             current_sum_r += r_date
+    #     return delay_obj
 
     def calculate_fitness(self, cfg, job_sequence_list, job_list, machines, fitness_cache):
         if tuple(job_sequence_list) in fitness_cache:
@@ -26,8 +41,6 @@ class BaseGrouper:
         batch_list, fitness = self.create_batch_list(cfg, job_list, job_sequence_list, machines)
         fitness_cache[tuple(job_sequence_list)] = len(batch_list) * 10000 + fitness
         return len(batch_list) * 10000 + fitness
-        # fitness_cache[tuple(job_sequence_list)] = len(batch_list) * 10000 + delay_obj
-        # return len(batch_list) * 10000 + delay_obj
 
 
 class EMS:
@@ -76,11 +89,11 @@ class BFFPacker(BaseGrouper):
                                           if ems.width * ems.height >= min_area_dict_by_family[job.family]]
                         batch.ems_list.sort(key=lambda item: item.width * item.height)
 
+        # return batch_list, self.get_obj(batch_list)
         for batch in batch_list:
             batch.update_by_placed_job_list()
-            # batch_list, due date가 큰 순으로 정렬
         batch_sequence_list = cfg.heuristic_scheduling_sequencer[0].get_sequence_list(cfg, batch_list, machines)
-        return batch_list, cfg.local_scheduler.get_schedule(None, batch_list, batch_sequence_list, machines)[1]
+        return batch_list, cfg.local_scheduler.get_schedule(cfg, batch_list, batch_sequence_list, machines)[1]
 
     @staticmethod
     def find_best_fit_in_batch_list(job, batch_list):

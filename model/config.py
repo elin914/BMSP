@@ -6,32 +6,34 @@ import pandas as pd
 class Config:
     def __init__(self):
         self.random_seed = 42
+        self.start_date = 31
+        self.time_duration = 60
 
         self.data_instance = {
             'size_type': 'A',  # A, B
             'n_machines': 4,  # 3, 4, 5
             'n_families': 6,  # 3, 6, 12
             'total_n_jobs': 60,  # 60, 180, 300
-            'alpha': 0.75,  # 0.25, 0.5, 0.75
-            'beta': 0.75  # 0.25, 0.5, 0.75
+            'alpha': 0.5,  # 0.25, 0.5, 0.75
+            'beta': 0.5  # 0.25, 0.5, 0.75
         }
 
         # Integrated, Sequential_Sequential, Sequential_Integrated, Integrated_Sequential, Integrated_Integrated
-        self.model_type = 'Sequential_Sequential'
+        self.model_type = 'Sequential_Integrated'
         self.integrated_solver = 'CP'
-        self.grouping_sequencer = 'OBRKGA'  # EDD, SST, SA, LA, RKGA, BRKGA, OBRKGA, SA, LNS
+        self.grouping_sequencer = 'OBRKGA'  # EDD, SST, SA, LA, RKGA, BRKGA, OBRKGA, SimA, Tabu
         self.grouper = 'ABFF'  # BFF, ABFF
         self.integrated_grouper = 'CP'
-        self.scheduling_sequencer = 'OBRKGA'  # EDD, LDD, MB, RKGA, BRKGA, OBRKGA, SA, LNS
-        self.scheduler = 'BW'  # GL, IBH, BW
-        self.integrated_scheduler = 'CP'  # CP, CP2
+        self.scheduling_sequencer = 'LDD'  # EDD, LDD, MB, RKGA, BRKGA, OBRKGA, SA, LNS
+        self.scheduler = 'RBW'  # GL, IBH, BW, RBW
+        self.integrated_scheduler = 'RCP'  # CP, RCP
 
         self.GAgrouper_parameter = {
             'population_size': 1000,  # jobs * 30
             'generations': 1000,
-            'elite_rate': 0.1,
+            'elite_rate': 0.15,
             'mutation_rate': 0.05,
-            'mutant_rate': 0.5,
+            'mutant_rate': 0.3,
             'tournament_size': 2,
             'crossover_prob': 0.6,
             'early_stop_count': 20
@@ -39,15 +41,15 @@ class Config:
         self.GAsequencer_parameter = {
             'population_size': 1000,  # jobs * 30
             'generations': 1000,
-            'elite_rate': 0.1,
+            'elite_rate': 0.15,
             'mutation_rate': 0.05,
-            'mutant_rate': 0.5,
+            'mutant_rate': 0.3,
             'tournament_size': 2,
             'crossover_prob': 0.6,
-            'early_stop_count': 20
+            'early_stop_count': 30
         }
 
-        self.cp_search_time_limit = 60
+        self.cp_search_time_limit = 300
         self.use_starting_point = False
 
         self.heuristic_grouping_sequencer = ['EDD', 'SST', 'SA', 'LA']
@@ -60,10 +62,10 @@ class Config:
                                                                         str(current_time.tm_hour),
                                                                         str(current_time.tm_min),
                                                                         str(current_time.tm_sec))
-        os.makedirs(self.result_folder_path, exist_ok=True)
-        self.save_config()
+        # self.save_config()
 
     def save_config(self, name=None):
+        os.makedirs(self.result_folder_path, exist_ok=True)
         config_series = pd.Series(self.__dict__.copy())
         config_df = config_series.to_frame(name='Value')
         save_path = os.path.join(self.result_folder_path, 'configuration.xlsx') if name is None \
