@@ -124,7 +124,5 @@ dmypy.json
 .pyre/
 
 .idea/
-*.xlsx
 *.xls
 *.ipynb
-*.csv
