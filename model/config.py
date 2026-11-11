@@ -24,7 +24,7 @@ class Config:
         self.grouping_sequencer = 'OBRKGA'  # EDD, SST, SA, LA, RKGA, BRKGA, OBRKGA, SimA, Tabu
         self.grouper = 'ABFF'  # BFF, ABFF
         self.integrated_grouper = 'CP'
-        self.scheduling_sequencer = 'LDD'  # EDD, LDD, MB, RKGA, BRKGA, OBRKGA, SA, LNS
+        self.scheduling_sequencer = 'LDD'  # EDD, LDD, MB, RKGA, BRKGA, OBRKGA, SimA, Tabu
         self.scheduler = 'RBW'  # GL, IBH, BW, RBW
         self.integrated_scheduler = 'RCP'  # CP, RCP
 

@@ -1,5 +1,5 @@
 from typing import List
-from model.data import Job, Batch, PlacedJob
+from data import Job, Batch, PlacedJob
 from docplex.cp.model import *
 from .grouping_sequencers import EDDGroupingSequencer, SSTGroupingSequencer, SAGroupingSequencer, LAGroupingSequencer
 from .groupers import AdjustedBFFPacker
@@ -21,7 +21,7 @@ class CPGrouper(BaseIntegratedGrouper):
         best_batch_list = list()
         best_fitness = float('inf')
         for sequencer in heuristic_sequencers:
-            job_sequence_list = sequencer.get_sequence_list(None, None, job_list, None)
+            job_sequence_list = sequencer.get_sequence_list(None, job_list, None)
             current_batch_list, current_delay = grouper.create_batch_list(cfg, job_list, job_sequence_list, machines)
             current_fitness = len(current_batch_list) * 10000 + current_delay
             if current_fitness < best_fitness:

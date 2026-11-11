@@ -1,5 +1,5 @@
 from typing import List
-from model.data import Job, PlacedJob, Batch
+from data import Job, PlacedJob, Batch
 import numpy as np
 
 

@@ -1,8 +1,8 @@
 from typing import List
-from model.data import Job
+from data import Job
 import random
 import numpy as np
-from model.utils import find_next_prime
+from utils import find_next_prime
 import multiprocessing
 from multiprocessing import Pool
 import math

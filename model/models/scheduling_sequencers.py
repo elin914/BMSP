@@ -1,6 +1,7 @@
 from typing import List
-from model.data import Batch
-from .grouping_sequencers import RKGAGroupingSequencer, BRKGAGroupingSequencer, OBRKGAGroupingSequencer
+from data import Batch
+from .grouping_sequencers import (RKGAGroupingSequencer, BRKGAGroupingSequencer, OBRKGAGroupingSequencer,
+                                  SimAGroupingSequencer, TabuGroupingSequencer)
 import numpy as np
 
 
@@ -58,3 +59,17 @@ class OBRKGASchedulingSequencer(BRKGASchedulingSequencer):
 
     def initialize_population(self, *args, **kwargs):
         return self.grouping_sequencer.initialize_population(*args, **kwargs)
+
+
+class SimASchedulingSequencer(BaseSchedulingSequencer, SimAGroupingSequencer):
+    """Simulated Annealing: 배치 순서를 탐색하고 local_scheduler로 평가"""
+    def get_sequence_list(self, cfg, batch_list: List[Batch], machines) -> List[int]:
+        return self.run_sa(cfg, cfg.local_scheduler, batch_list, machines,
+                           cfg.GAsequencer_parameter, cfg.heuristic_scheduling_sequencer)
+
+
+class TabuSchedulingSequencer(BaseSchedulingSequencer, TabuGroupingSequencer):
+    """Tabu Search: 배치 순서를 탐색하고 local_scheduler로 평가"""
+    def get_sequence_list(self, cfg, batch_list: List[Batch], machines) -> List[int]:
+        return self.run_tabu(cfg, cfg.local_scheduler, batch_list, machines,
+                             cfg.GAsequencer_parameter, cfg.heuristic_scheduling_sequencer)

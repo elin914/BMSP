@@ -1,5 +1,6 @@
 from typing import List, Tuple
-from model.data import Job
+from data import Job, PlacedJob, Batch
+from .integrated_schedulers import assign_machines
 from docplex.cp.model import *
 
 
@@ -37,6 +38,10 @@ class CPSolver(BaseSolver):
                 best_sequencer = sequencer
                 best_sequence_list = batch_sequence_list
 
+        # 휴리스틱을 여러 개 돌리면 batch 객체의 start/end_time은 '마지막' 휴리스틱 값으로 덮어써진다.
+        # best 휴리스틱으로 한 번 더 돌려서 batch 시간 = best_schedule_list 가 되도록 맞춤
+        # (CP horizon, starting point, CP 실패 시 fallback 모두 이 값을 사용)
+        best_schedule_list, best_fitness = scheduler.get_schedule(cfg, best_batch_list, best_sequence_list, machines)
         model = CpoModel()
         end_time = max(best_batch_list[b_idx].end_time for schedule in best_schedule_list for b_idx in schedule)
         n_bin = len(best_batch_list) + 1
@@ -114,8 +119,34 @@ class CPSolver(BaseSolver):
         model.add(model.minimize(obj1 * 10000 + obj2))
         sol = model.solve(TimeLimit=cfg.cp_search_time_limit, SearchType='Auto')
 
-        if sol:
-            pass
-        else:
+        if not sol:
+            print("CP failed to find a solution. Returning heuristic solution.")
+            self.batch_list = best_batch_list
             return best_schedule_list, best_fitness
+
+        # 1. CP 해 -> 배치 구성 (bin 번호별로 job 모음)
+        placed_by_bin = dict()
+        for i, job in enumerate(job_list):
+            b_idx = sol.get_var_solution(bin_var_dict[i]).get_value()
+            x_sol = sol.get_var_solution(x_var_dict[i])
+            y_sol = sol.get_var_solution(y_var_dict[i])
+            rotation = not (x_sol.get_size() == job.width and y_sol.get_size() == job.height)
+            placed_by_bin.setdefault(b_idx, []).append(PlacedJob(job, rotation, x_sol.get_start(), y_sol.get_start()))
+
+        batch_list = list()
+        for b_idx in sorted(placed_by_bin):
+            batch = Batch(len(batch_list), machines.width, machines.height)
+            batch.placed_job_list = placed_by_bin[b_idx]
+            batch.family = batch.placed_job_list[0].job.family
+            batch.update_by_placed_job_list()
+            interval = sol.get_var_solution(batch_var_dict[b_idx])
+            batch.start_time = interval.get_start()
+            batch.end_time = interval.get_end()
+            batch.delay_time = sum(abs(batch.end_time - due_date) for due_date in batch.due_date_list)
+            batch_list.append(batch)
+
+        # 2. 기계 배정 (CP는 cumulative 자원이라 기계 정보가 없음)
+        schedule_list = assign_machines(batch_list, machines.n_machine)
+        self.batch_list = batch_list  # 호출 측에서 배치 정보가 필요할 때 사용
+        return schedule_list, sum(batch.delay_time for batch in batch_list)
 

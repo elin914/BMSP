@@ -1,5 +1,5 @@
 from typing import List, Tuple
-from model.data import Batch
+from data import Batch
 import numpy as np
 
 
@@ -187,6 +187,9 @@ class BackWardScheduler(BaseScheduler):
 
 class RealBackWardScheduler(BaseScheduler):
     def get_schedule(self, cfg, batch_list: List[Batch], batch_sequence_list, machines) -> Tuple[List[int], int]:
+        if getattr(cfg, 'family_dict', None) is None:
+            raise ValueError("RBW/RCP는 달력(family_dict)이 있는 실제 데이터(load_data) 전용입니다. "
+                             "가상 데이터(make_data)는 scheduler='BW', integrated_scheduler='CP'를 쓰세요.")
         family_dict = cfg.family_dict
         schedule_list = [[] for _ in range(machines.n_machine)]
 
@@ -239,7 +242,7 @@ class RealBackWardScheduler(BaseScheduler):
             members = batches_by_family.get(fam_code, [])
             for member in members:
                 # 나 자신은 제외
-                if member.id == my_batch_id: continue
+                if member.idx == my_batch_id: continue
                 # 아직 배치 안 된 녀석도 제외
                 if member.start_time is None: continue
 
@@ -303,7 +306,7 @@ class RealBackWardScheduler(BaseScheduler):
                             ideal_start += 1;
                             continue
                         # 2. Family Gap 체크 (동적)
-                        if not check_family_gap_dynamic(ideal_start, batch.id, fam_code):
+                        if not check_family_gap_dynamic(ideal_start, batch.idx, fam_code):
                             ideal_start += 1;
                             continue
                         # 3. Hard/Duration 체크
@@ -385,7 +388,7 @@ class RealBackWardScheduler(BaseScheduler):
 
                                 # 2. [추가] 밀리는 놈도 Family Gap 지켜야 함!
                                 # 주의: 자기 자신(batch2)은 제외하고 검사
-                                if not check_family_gap_dynamic(sim_start, batch2.id, batch2.family):
+                                if not check_family_gap_dynamic(sim_start, batch2.idx, batch2.family):
                                     sim_start += 1;
                                     continue
 
@@ -444,7 +447,7 @@ class RealBackWardScheduler(BaseScheduler):
                     # 정렬되어 있으므로, 새 배치(ideal_start) 이후의 배치들이 검사 대상
 
                     for batch2 in target_batches:
-                        if batch2.id == batch.id: continue  # 방금 넣은 놈은 패스
+                        if batch2.idx == batch.idx: continue  # 방금 넣은 놈은 패스
 
                         # 겹치면 민다 (새 놈 끝 > 기존 놈 시작)
                         if completion_time > batch2.start_time:
@@ -457,7 +460,7 @@ class RealBackWardScheduler(BaseScheduler):
                                     continue
 
                                 # 밀리는 놈 Family Gap 검사
-                                if not check_family_gap_dynamic(new_start, batch2.id, batch2.family):
+                                if not check_family_gap_dynamic(new_start, batch2.idx, batch2.family):
                                     new_start += 1;
                                     continue
 

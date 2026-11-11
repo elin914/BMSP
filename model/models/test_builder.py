@@ -1,27 +1,7 @@
-from .integrated_solver import *
-from .grouping_sequencers import *
-from .groupers import *
-from .integrated_groupers import *
-from .scheduling_sequencers import *
-from .schedulers import *
-from .integrated_schedulers import *
-
-integrated_solver_dispatcher = {'CP': CPSolver}
-grouping_sequencers_dispatcher = {'EDD': EDDGroupingSequencer, 'SST': SSTGroupingSequencer,
-                                  'SA': SAGroupingSequencer, 'LA': LAGroupingSequencer,
-                                  'RKGA': RKGAGroupingSequencer, 'BRKGA': BRKGAGroupingSequencer,
-                                  'OBRKGA': OBRKGAGroupingSequencer,
-                                  'SimA': SimAGroupingSequencer, 'Tabu': TabuGroupingSequencer}
-grouper_dispatcher = {'BFF': BFFPacker, 'ABFF': AdjustedBFFPacker}
-integrated_grouper_dispatcher = {'CP': CPGrouper}
-scheduling_sequencer_dispatcher = {'LDD': LDDSchedulingSequencer,
-                                   'EDD': EDDSchedulingSequencer, 'MB': MBSchedulingSequencer,
-                                   'RKGA': RKGASchedulingSequencer, 'BRKGA': BRKGASchedulingSequencer,
-                                   'OBRKGA': OBRKGASchedulingSequencer}
-scheduler_dispatcher = {'GL': GLScheduler, 'IBH': IBHScheduler, 'BW': BackWardScheduler,
-                        'RBW': RealBackWardScheduler}
-integrated_scheduler_dispatcher = {'CP': CPIntegratedScheduler, 'RCP': RealCPIntegratedScheduler}
-                                   # 'ATC': ATCIntegratedScheduler, 'COVERT': COVERTIntegratedScheduler}
+# dispatcher는 builder.py 하나만 관리 (예전엔 복사본이 있어서 SimA/Tabu 등이 서로 달랐음)
+from .builder import (integrated_solver_dispatcher, grouping_sequencers_dispatcher, grouper_dispatcher,
+                      integrated_grouper_dispatcher, scheduling_sequencer_dispatcher, scheduler_dispatcher,
+                      integrated_scheduler_dispatcher)
 
 
 class IntegratedModel:

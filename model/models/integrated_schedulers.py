@@ -1,6 +1,22 @@
 from typing import List, Tuple
-from model.data import Batch
+from data import Batch
 from docplex.cp.model import *
+
+
+def assign_machines(batch_list, n_machine):
+    """CP(cumulative) 해의 배치들을 실제 기계에 배정.
+    동시에 도는 배치 수 <= n_machine 이 보장되면 시작시간 순 greedy로 항상 배정 가능(interval graph coloring)."""
+    schedule_list = [[] for _ in range(n_machine)]
+    machine_end = [float('-inf')] * n_machine
+    for b_idx in sorted(range(len(batch_list)), key=lambda i: (batch_list[i].start_time, batch_list[i].end_time)):
+        batch = batch_list[b_idx]
+        free = [m for m in range(n_machine) if machine_end[m] <= batch.start_time]
+        if not free:
+            raise RuntimeError(f"Batch {b_idx}: 기계 배정 실패 (동시 가동 배치 수가 기계 수 초과)")
+        m = max(free, key=lambda k: machine_end[k])  # 가장 최근에 비는 기계(best fit)
+        schedule_list[m].append(b_idx)
+        machine_end[m] = batch.end_time
+    return schedule_list
 
 
 class BaseIntegratedScheduler:
@@ -25,6 +41,10 @@ class CPIntegratedScheduler(BaseIntegratedScheduler):
                 best_sequencer = sequencer
                 best_sequence_list = batch_sequence_list
 
+        # 휴리스틱을 여러 개 돌리면 batch 객체의 start/end_time은 '마지막' 휴리스틱 값으로 덮어써진다.
+        # best 휴리스틱으로 한 번 더 돌려서 batch 시간 = best_schedule_list 가 되도록 맞춤
+        # (CP horizon, starting point, CP 실패 시 fallback 모두 이 값을 사용)
+        best_schedule_list, best_fitness = scheduler.get_schedule(cfg, batch_list, best_sequence_list, machines)
         model = CpoModel()
         end_time = max(batch_list[b_idx].end_time for schedule in best_schedule_list for b_idx in schedule)
         batch_var_dict = dict()
@@ -65,7 +85,7 @@ class CPIntegratedScheduler(BaseIntegratedScheduler):
                 batch.end_time = sol.get_var_solution(var).get_end()
                 batch.delay_time = sum(abs(batch.end_time - due_date) for due_date in batch.due_date_list)
                 total_fitness += batch.delay_time
-            schedule_list[0] = sorted(range(len(batch_list)), key=lambda i: batch_list[i].end_time)
+            schedule_list = assign_machines(batch_list, machines.n_machine)
             return schedule_list, total_fitness
         else:
             return best_schedule_list, best_fitness
@@ -94,10 +114,17 @@ class RealCPIntegratedScheduler(BaseIntegratedScheduler):
                 best_sequencer = sequencer
                 best_sequence_list = batch_sequence_list
 
+        # 휴리스틱을 여러 개 돌리면 batch 객체의 start/end_time은 '마지막' 휴리스틱 값으로 덮어써진다.
+        # best 휴리스틱으로 한 번 더 돌려서 batch 시간 = best_schedule_list 가 되도록 맞춤
+        # (CP horizon, starting point, CP 실패 시 fallback 모두 이 값을 사용)
+        best_schedule_list, best_fitness = scheduler.get_schedule(cfg, batch_list, best_sequence_list, machines)
         # ==============================================================================
         # 2. CP 모델링 시작
         # ==============================================================================
         model = CpoModel()
+        if getattr(cfg, 'family_dict', None) is None:
+            raise ValueError("RBW/RCP는 달력(family_dict)이 있는 실제 데이터(load_data) 전용입니다. "
+                             "가상 데이터(make_data)는 scheduler='BW', integrated_scheduler='CP'를 쓰세요.")
         family_dict = cfg.family_dict
 
         # Heuristic 결과에서 가장 늦은 종료 시간을 기준으로 Horizon 설정 (여유분 추가)

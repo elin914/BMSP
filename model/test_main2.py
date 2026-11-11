@@ -3,66 +3,48 @@ from config import Config
 from data import Data
 from utils import *
 from models import test_model_builder
-import csv
-import os
-from datetime import datetime
+from experiment_utils import ResultLogger
 
 
 if __name__ == '__main__':
-    save_dir = './results'
-    os.makedirs(save_dir, exist_ok=True)
-    exp_name = "S_S_job_OBRKGA_test"
+    # 모델 목록만 바꾸면 CSV 헤더도 자동으로 바뀜 (예: ['RKGA', 'BRKGA', 'OBRKGA'])
+    model_names = ['OBRKGA']
+    logger = ResultLogger(
+        save_dir='./results', exp_name='S_S_job_OBRKGA_test',
+        id_cols=['n_of_job', 'iteration', 'seed'],
+        model_names=model_names,
+        fields=['P1_time', 'P1_bin', 'P1_fitness', 'P2_time', 'P2_fitness', 'CP_time', 'CP_fitness'])
 
-    current_time_str = datetime.now().strftime('%Y%m%d_%H%M%S')
-    file_name = f"{exp_name}_{current_time_str}.csv"
-    full_path = os.path.join(save_dir, file_name)
-    headers = ['n_of_job', 'iteration', 'seed',
-               # 'RKGA_P1_time', 'RKGA_P1_bin', 'RKGA_P1_fitness',
-               'RKGA_P2_time', 'RKGA_P2_fitness', 'RKGA_CP_time', 'RKGA_CP_fitness',
-               'BRKGA_P1_time', 'BRKGA_P1_bin', 'BRKGA_P1_fitness',
-               'BRKGA_P2_time', 'BRKGA_P2_fitness', 'BRKGA_CP_time', 'BRKGA_CP_fitness',
-               'OBRKGA_P1_time', 'OBRKGA_P1_bin', 'OBRKGA_P1_fitness',
-               'OBRKGA_P2_time', 'OBRKGA_P2_fitness', 'OBRKGA_CP_time', 'OBRKGA_CP_fitness'
-               ]
-
-    with open(full_path, 'w', newline='', encoding='utf-8-sig') as f:
-        writer = csv.writer(f)
-        writer.writerow(headers)
-
-    print(f"\n[*] 실험 시작! 결과는 '{full_path}'에 실시간으로 저장됩니다.\n")
-    print(os.path.abspath(full_path))
     job_list_counts = [24, 36, 48, 60, 120, 180, 300]
     # job_list_counts = [24, 60, 180, 300]
-
-    parameter_list = [(60, 2), (60, 7), (120, 1), (180, 1), (300, 1)]
+    n_iterations = 10
 
     for n_of_job in job_list_counts:
-    # for (n_of_job, problem_idx) in parameter_list:
         print(f"--- [Experiment Group] Total Jobs: {n_of_job} ---")
-        for i in range(10):
-            current_seed = 0
-            result_row = [n_of_job, i + 1, 0]
+        for i in range(n_iterations):
+            # 이 실험은 데이터와 알고리즘이 같은 seed를 사용
+            current_seed = Config().random_seed + i
+            tag = f"[Total Jobs: {n_of_job}, Iter {i + 1}/{n_iterations}] Seed: {current_seed}"
             model_results = dict()
-            # for model_name in ['RKGA', 'BRKGA', 'OBRKGA']:
-            for model_name in ['OBRKGA']:
+            for model_name in model_names:
                 temp_model_result = list()
                 try:
                     cfg = Config()
+                    # 가상 데이터에는 달력(family_dict)이 없으므로 실제 데이터용 RBW/RCP 대신 BW/CP를 명시
+                    # (config.py 기본값이 실제 데이터용으로 바뀌어도 가상 실험이 깨지지 않게)
+                    cfg.scheduler = 'BW'
+                    cfg.integrated_scheduler = 'CP'
                     cfg.grouping_sequencer = model_name
                     cfg.scheduling_sequencer = model_name
                     cfg.data_instance['total_n_jobs'] = n_of_job
-                    cfg.random_seed += i
-                    current_seed = cfg.random_seed
+                    cfg.random_seed = current_seed
                     set_random_seed(cfg.random_seed)
 
                     data = Data()
                     data.make_data(cfg)
-
-                    if result_row[2] == 0:
-                        result_row[2] = current_seed
                     model_s, model_c = test_model_builder(cfg)
 
-                    print(f"   > [Iter {i + 1}/10] Seed: {current_seed} | Solving...", end='\r')
+                    print(f"   > {tag} | Solving...", end='\r')
 
                     time_before = time.time()
                     batch_list, fitness1 = model_s.solve_phase1(cfg, data.job_list, data.machines)
@@ -84,24 +66,13 @@ if __name__ == '__main__':
                     temp_model_result.append(round(time_after - time_before, 4))
                     temp_model_result.append(CP_fitness)
 
-                    model_results[model_name] = temp_model_result
-                    print(f"   > [Total Jobs: {n_of_job}, Iter {i + 1}/10] Seed: {current_seed} | {model_name} Solved.")
+                    print(f"   > {tag} | {model_name} Solved.")
 
-                except Exception as e:
-                    print(f"\n   !!! [Error] Job: {n_of_job}, Iter: {i + 1}, Model: {model_name} Failed. Reason: {e}")
-                    model_results[model_name] = [0] * 7
+                except Exception:
+                    logger.log_error(f"{tag} Model: {model_name}")
+                model_results[model_name] = temp_model_result
 
-            result_row.extend(model_results.get('RKGA', [0] * 7))
-            result_row.extend(model_results.get('BRKGA', [0] * 7))
-            result_row.extend(model_results.get('OBRKGA', [0] * 7))
-            # result_row.extend(model_results.get('RKGA', [0] * 3))
-            # result_row.extend(model_results.get('BRKGA', [0] * 3))
-            # result_row.extend(model_results.get('OBRKGA', [0] * 3))
-
-            with open(full_path, 'a', newline='', encoding='utf-8-sig') as f:
-                writer = csv.writer(f)
-                writer.writerow(result_row)
-
-            print(f"   > [Total Jobs: {n_of_job}, Iter {i + 1}/10] Final Row Saved.")
+            logger.write_row([n_of_job, i + 1, current_seed], model_results)
+            print(f"   > {tag} | Final Row Saved.")
             print("--------------------------------------------------\n")
-    print(f"[*] 모든 실험 종료. 최종 파일: {full_path}")
+    print(f"[*] 모든 실험 종료. 최종 파일: {logger.csv_path}")

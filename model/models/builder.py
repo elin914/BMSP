@@ -18,7 +18,7 @@ scheduling_sequencer_dispatcher = {'LDD': LDDSchedulingSequencer,
                                    'EDD': EDDSchedulingSequencer, 'MB': MBSchedulingSequencer,
                                    'RKGA': RKGASchedulingSequencer, 'BRKGA': BRKGASchedulingSequencer,
                                    'OBRKGA': OBRKGASchedulingSequencer,
-                                   'SimA': SimAGroupingSequencer, 'Tabu': TabuGroupingSequencer}
+                                   'SimA': SimASchedulingSequencer, 'Tabu': TabuSchedulingSequencer}
 scheduler_dispatcher = {'GL': GLScheduler, 'IBH': IBHScheduler, 'BW': BackWardScheduler,
                         'RBW': RealBackWardScheduler}
 integrated_scheduler_dispatcher = {'CP': CPIntegratedScheduler, 'RCP': RealCPIntegratedScheduler}

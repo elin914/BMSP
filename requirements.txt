@@ -1,0 +1,7 @@
+numpy
+pandas
+openpyxl
+docplex
+# CP Optimizer 실행 파일. pip의 cplex는 Community Edition(변수/제약 1000개 제한)이라
+# 큰 인스턴스는 IBM ILOG CPLEX Optimization Studio(학술 라이선스 등) 설치가 필요
+cplex
