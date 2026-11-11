@@ -151,17 +151,23 @@ class BFFPacker(BaseGrouper):
                 newly_generated_ems.append(EMS(ems.x, job_y + job_h, ems.width, (ems.y + ems.height) - (job_y + job_h)))
 
         final_ems_list = []
-        for ems1 in newly_generated_ems:
+        for i, ems1 in enumerate(newly_generated_ems):
             is_maximal = True
-            for ems2 in newly_generated_ems:
-                if ems1 is ems2:
+            for j, ems2 in enumerate(newly_generated_ems):
+                if i == j:
                     continue
                 if (ems2.x <= ems1.x and ems2.y <= ems1.y and
                         ems2.x + ems2.width >= ems1.x + ems1.width and
                         ems2.y + ems2.height >= ems1.y + ems1.height):
+                    is_identical = (ems2.x == ems1.x and ems2.y == ems1.y and
+                                    ems2.width == ems1.width and ems2.height == ems1.height)
+                    # 똑같은 EMS가 여러 개면 서로를 포함한다고 판단해 둘 다 지워지므로, 하나(앞의 것)는 남김
+                    if is_identical and j > i:
+                        continue
                     is_maximal = False
                     break
-            if is_maximal and ems1.width * ems1.height > min_area:
+            # 남은 job 중 가장 작은 면적과 같은 EMS도 쓸 수 있으므로 >= (아래 family 갱신 부분과 동일 기준)
+            if is_maximal and ems1.width * ems1.height >= min_area:
                 final_ems_list.append(ems1)
 
         batch.ems_list = final_ems_list
