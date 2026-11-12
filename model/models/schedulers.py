@@ -1,6 +1,5 @@
 from typing import List, Tuple
-from data import Batch
-import numpy as np
+from data import Batch, upper_median
 
 
 class BaseScheduler:
@@ -96,10 +95,7 @@ class BackWardScheduler(BaseScheduler):
 
         for b_idx in batch_sequence_list:
             batch = batch_list[b_idx]
-            if len(batch.due_date_list) % 2:
-                ideal_end = int(np.median(batch.due_date_list))
-            else:
-                ideal_end = sorted(batch.due_date_list)[len(batch.due_date_list) // 2]
+            ideal_end = upper_median(batch.due_date_list)
             ideal_start = ideal_end - batch.processing_time
             start_time_list = [batch_list[b_idx].start_time for schedule in schedule_list for b_idx in schedule]
             while ideal_start in start_time_list:
@@ -271,10 +267,7 @@ class RealBackWardScheduler(BaseScheduler):
             fam_code = batch.family
 
             # 1. Ideal Start 역산
-            if len(batch.due_date_list) % 2:
-                ideal_end_target = int(np.median(batch.due_date_list))
-            else:
-                ideal_end_target = sorted(batch.due_date_list)[len(batch.due_date_list) // 2]
+            ideal_end_target = upper_median(batch.due_date_list)
 
             ideal_start = calculate_ideal_start(ideal_end_target, batch.processing_time, fam_code)
             ideal_end = ideal_end_target

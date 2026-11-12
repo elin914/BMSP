@@ -40,11 +40,34 @@ class LAGroupingSequencer(BaseGroupingSequencer):
 
 
 def worker_fitness_calculation(args):
+    """(직렬 실행용) 인자를 매번 다 받아서 평가. SA처럼 Pool을 쓰지 않는 곳에서 사용"""
     chromosome, list_len, cfg, evaluator, data_list, machines = args
     decoded_seq = RKGAGroupingSequencer.decode_chromosome(list_len, chromosome)
     seq_tuple = tuple(decoded_seq)
     fitness = evaluator.calculate_fitness(cfg, decoded_seq, data_list, machines, {})
     return chromosome, fitness, seq_tuple
+
+
+# Pool 워커 프로세스마다 한 번만 받아두는 평가 정보 (cfg, 평가기, 데이터).
+# 예전에는 염색체 하나를 평가할 때마다 이 객체들을 전부 다시 직렬화해서 보냈음.
+_FITNESS_CONTEXT = None
+
+
+def _init_fitness_worker(list_len, cfg, evaluator, data_list, machines):
+    global _FITNESS_CONTEXT
+    _FITNESS_CONTEXT = (list_len, cfg, evaluator, data_list, machines)
+
+
+def _evaluate_chromosome(chromosome):
+    list_len, cfg, evaluator, data_list, machines = _FITNESS_CONTEXT
+    decoded_seq = RKGAGroupingSequencer.decode_chromosome(list_len, chromosome)
+    return evaluator.calculate_fitness(cfg, decoded_seq, data_list, machines, {}), tuple(decoded_seq)
+
+
+def make_fitness_pool(list_len, cfg, evaluator, data_list, machines, **pool_kwargs):
+    """pool.map(_evaluate_chromosome, chromosomes) -> [(fitness, decoded_seq_tuple), ...] (입력 순서 유지)"""
+    return Pool(initializer=_init_fitness_worker, initargs=(list_len, cfg, evaluator, data_list, machines),
+                **pool_kwargs)
 
 
 class RKGAGroupingSequencer(BaseGroupingSequencer):
@@ -63,10 +86,10 @@ class RKGAGroupingSequencer(BaseGroupingSequencer):
                                                 heuristic_sequencers, fitness_cache)
 
         early_stop_count = 0
-        with Pool(processes=None, maxtasksperchild=100) as pool:
+        with make_fitness_pool(list_len, cfg, evaluator, data_list, machines, maxtasksperchild=100) as pool:
             for gen in range(param['generations']):
                 evaluated_population = []
-                to_calculate_args = []
+                to_calculate = []
                 for chromosome in population:
                     decoded_seq = self.decode_chromosome(list_len, chromosome)
                     seq_key = tuple(decoded_seq)
@@ -74,12 +97,10 @@ class RKGAGroupingSequencer(BaseGroupingSequencer):
                         fit = fitness_cache[seq_key]
                         evaluated_population.append((chromosome, fit))
                     else:
-                        to_calculate_args.append(
-                            (chromosome, list_len, cfg, evaluator, data_list, machines)
-                        )
-                if len(to_calculate_args) > 0:
-                    results = pool.map(worker_fitness_calculation, to_calculate_args)
-                    for chromo, fit, key in results:
+                        to_calculate.append(chromosome)
+                if len(to_calculate) > 0:
+                    results = pool.map(_evaluate_chromosome, to_calculate)
+                    for chromo, (fit, key) in zip(to_calculate, results):
                         evaluated_population.append((chromo, fit))
                         fitness_cache[key] = fit
 
@@ -226,14 +247,10 @@ class OBRKGAGroupingSequencer(BRKGAGroupingSequencer):
 
         if param['population_size'] - len(init_population) < len(sampled_population):
             list_len = len(data_list)
-            to_calc_args = [
-                (chromosome, list_len, cfg, evaluator, data_list, machines)
-                for chromosome in sampled_population
-            ]
-            with Pool() as pool:
-                results = pool.map(worker_fitness_calculation, to_calc_args)
+            with make_fitness_pool(list_len, cfg, evaluator, data_list, machines) as pool:
+                results = pool.map(_evaluate_chromosome, sampled_population)
             evaluated_samples = []
-            for chromo, fit, key in results:
+            for chromo, (fit, key) in zip(sampled_population, results):
                 evaluated_samples.append((chromo, fit))
                 fitness_cache[key] = fit
 
@@ -356,7 +373,7 @@ class TabuGroupingSequencer(RKGAGroupingSequencer):
         tabu_tenure = 20
         tabu_list = deque(maxlen=tabu_tenure)
 
-        with Pool(processes=None) as pool:
+        with make_fitness_pool(list_len, cfg, evaluator, data_list, machines) as pool:
             for it in range(max_iter):
 
                 candidates = []
@@ -372,13 +389,10 @@ class TabuGroupingSequencer(RKGAGroupingSequencer):
                     candidates.append(n_seq)
                     moves.append(move)
 
-                    n_chromo = self.encode_sequence(n_seq, list_len)
-                    to_calc_args.append(
-                        (n_chromo, list_len, cfg, evaluator, data_list, machines)
-                    )
+                    to_calc_args.append(self.encode_sequence(n_seq, list_len))
 
                 if to_calc_args:
-                    results = pool.map(worker_fitness_calculation, to_calc_args)
+                    results = pool.map(_evaluate_chromosome, to_calc_args)
                 else:
                     results = []
 
@@ -386,7 +400,7 @@ class TabuGroupingSequencer(RKGAGroupingSequencer):
                 best_neighbor_idx = -1
 
                 for i, res in enumerate(results):
-                    fit = res[1]
+                    fit = res[0]
                     move = moves[i]
 
                     is_tabu = move in tabu_list

@@ -3,6 +3,12 @@ import pandas as pd
 from datetime import timedelta
 
 
+def upper_median(values):
+    """중앙값 (짝수 개면 가운데 두 값 중 큰 값).
+    홀수 개일 때 np.median과 같은 값이고, 짧은 리스트에서는 np.median보다 훨씬 빠르다."""
+    return sorted(values)[len(values) // 2]
+
+
 class Job:
     def __init__(self, idx, family, width, height, p_time, release_date, due_date):
         self.idx = idx
@@ -50,6 +56,7 @@ class Batch:
         self.max_release_date = None
         self.due_date_list = list()
         self.med_due_date = None
+        self.mean_due_date = None
         self.start_time = None
         self.end_time = None
         self.delay_time = None
@@ -58,8 +65,8 @@ class Batch:
         self.processing_time = self.placed_job_list[0].job.p_time
         self.max_release_date = max([placedjob.release_date for placedjob in self.placed_job_list])
         self.due_date_list = [placedjob.due_date for placedjob in self.placed_job_list]
-        self.med_due_date = int(np.median(self.due_date_list)) if len(self.due_date_list) % 2\
-            else sorted(self.due_date_list)[len(self.due_date_list) // 2]
+        self.med_due_date = upper_median(self.due_date_list)
+        self.mean_due_date = sum(self.due_date_list) / len(self.due_date_list)
 
 
 def create_job_list(df_real, lead_time_margin):
