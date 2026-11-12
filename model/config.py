@@ -52,8 +52,13 @@ class Config:
         self.cp_search_time_limit = 300
         self.cp_log = False  # True면 CP Optimizer 탐색 로그를 화면에 출력
         self.use_starting_point = False  # 휴리스틱 해를 CP 초기해로 사용
-        self.cp_objective = 'abs'  # CP 스케줄러 목적함수 표현: 'abs' (납기마다 abs) / 'end_eval' (배치별 구간 선형 함수)
-        self.cp_distinct_start = 'all_diff'  # 시작 시간 중복 금지 표현: 'all_diff' / 'no_overlap'
+        # CP 스케줄러(CPIntegratedScheduler) 모델 표현. 같은 문제를 다르게 표현한 것이라 최적해는 같고, 시간 제한 안의 결과만 다름
+        #   cp_objective: 'abs' (납기마다 abs 항, 예전 방식) / 'end_eval' (배치별 구간 선형 비용 함수)
+        #     -> 10초 비교(13개 인스턴스)에서 end_eval이 평균 1% 좋고 job 120~300개에서 최대 7% 좋았음
+        #   cp_distinct_start: 'all_diff' (예전 방식) / 'no_overlap'
+        #     -> no_overlap은 이점이 없었고, 보조 변수 때문에 Community Edition 한계를 job 300개에서 초과함
+        self.cp_objective = 'abs'
+        self.cp_distinct_start = 'all_diff'
 
         self.heuristic_grouping_sequencer = ['EDD', 'SST', 'SA', 'LA']
         self.heuristic_scheduling_sequencer = ['LDD', 'EDD', 'MB']
