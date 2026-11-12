@@ -241,9 +241,9 @@ class OBRKGAGroupingSequencer(BRKGAGroupingSequencer):
         selected_indices = np.random.choice(len(unique_sequences), sample_size, replace=False)
         sequences = unique_sequences[selected_indices]
 
-        process_args = [(seq, data_len) for seq in sequences]
-        with Pool() as pool:
-            sampled_population = pool.starmap(self.encode_sequence, process_args)
+        # 예전에는 Pool 워커에서 encode했는데, fork된 워커들이 같은 난수 상태를 물려받고
+        # 어떤 워커가 어떤 묶음을 처리할지가 실행마다 달라서 같은 seed로도 결과가 달라졌음 -> 메인 프로세스에서 encode
+        sampled_population = [self.encode_sequence(seq, data_len) for seq in sequences]
 
         if param['population_size'] - len(init_population) < len(sampled_population):
             list_len = len(data_list)
