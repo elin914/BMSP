@@ -2,6 +2,22 @@ from typing import List, Tuple
 from data import Batch
 from docplex.cp.model import *
 import sys
+from collections import Counter
+
+
+def jit_cost_function(due_dates):
+    """f(e) = sum_j |d_j - e| 를 CP Optimizer 구간 선형 함수로 (end_eval용).
+    납기들이 꺾이는 점이고, 기울기는 (e 이하 납기 수) - (e 초과 납기 수)."""
+    count = Counter(due_dates)
+    dates = sorted(count)
+    k = len(due_dates)
+    cost = lambda e: sum(abs(d - e) for d in due_dates)
+    segments = list()
+    n_below = 0
+    for d in dates:
+        n_below += count[d]
+        segments.append((d, cost(d), n_below - (k - n_below)))
+    return CpoSegmentedFunction((-k, cost(dates[0])), segments)
 
 
 def cp_log_stream(cfg):
@@ -57,29 +73,43 @@ class CPIntegratedScheduler(BaseIntegratedScheduler):
         obj = 0
         load_function = model.step_at(0, 0)
         # for b_idx, batch in enumerate(batch_list):
+        # 모델 옵션 (기본값 = 예전 모델)
+        #   cp_objective      : 'abs' = 납기마다 abs 항 / 'end_eval' = 배치별 구간 선형 비용 함수(end_eval)
+        #   cp_distinct_start : 'all_diff' = 시작 시간 all_diff / 'no_overlap' = 길이 1 구간의 no_overlap (같은 제약)
+        #   use_starting_point: 휴리스틱(best_sequence_list) 해를 CP 초기해로 사용
+        cp_objective = getattr(cfg, 'cp_objective', 'abs')
+        cp_distinct_start = getattr(cfg, 'cp_distinct_start', 'all_diff')
         for b_idx in best_sequence_list:
             batch = batch_list[b_idx]
             var = model.interval_var(start=(batch.max_release_date, end_time), size=batch.processing_time)
             load_function += model.pulse(var, 1)
-            obj += model.sum([model.abs(due_date - model.end_of(var)) for due_date in batch.due_date_list])
-            # for _, var2 in batch_var_dict.items():
-            #     model.add(model.start_of(var) != model.start_of(var2))
+            if cp_objective == 'end_eval':
+                obj += model.end_eval(var, jit_cost_function(batch.due_date_list))
+            else:
+                obj += model.sum([model.abs(due_date - model.end_of(var)) for due_date in batch.due_date_list])
             batch_var_dict[b_idx] = var
-        all_start_times = [model.start_of(var) for var in batch_var_dict.values()]
-        model.add(model.all_diff(all_start_times))
+        if cp_distinct_start == 'no_overlap':
+            start_markers = list()
+            for var in batch_var_dict.values():
+                marker = model.interval_var(size=1)
+                model.add(model.start_at_start(marker, var))
+                start_markers.append(marker)
+            model.add(model.no_overlap(start_markers))
+        else:
+            all_start_times = [model.start_of(var) for var in batch_var_dict.values()]
+            model.add(model.all_diff(all_start_times))
         model.add(load_function <= machines.n_machine)
         model.add(model.minimize(obj))
 
         if cfg.use_starting_point:
-            batch_sequence_list = best_sequencer.get_sequence_list(None, batch_list, None)
-            best_schedule_list, best_fitness = \
-                scheduler.get_schedule(cfg, batch_list, batch_sequence_list, machines)
+            # batch 시간은 위에서 best 휴리스틱으로 다시 돌린 값 (BW 해는 용량/시작 시간 제약을 만족)
             start_sol = CpoModelSolution()
-            for b_idx, batch in enumerate(batch_list):
-                start_sol.add_interval_var_solution(batch_var_dict[b_idx], start=batch.start_time)
+            for b_idx, var in batch_var_dict.items():
+                start_sol.add_interval_var_solution(var, start=batch_list[b_idx].start_time)
             model.set_starting_point(start_sol)
 
         sol = model.solve(TimeLimit=cfg.cp_search_time_limit, SearchType='Auto', log_output=cp_log_stream(cfg))
+        self.solve_status = sol.get_solve_status()  # 'Optimal', 'Feasible', 'Unknown', ...
 
         if sol:
             print(f"Final objective value: {sol.get_objective_value()}")

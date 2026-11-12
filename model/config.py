@@ -51,7 +51,9 @@ class Config:
 
         self.cp_search_time_limit = 300
         self.cp_log = False  # True면 CP Optimizer 탐색 로그를 화면에 출력
-        self.use_starting_point = False
+        self.use_starting_point = False  # 휴리스틱 해를 CP 초기해로 사용
+        self.cp_objective = 'abs'  # CP 스케줄러 목적함수 표현: 'abs' (납기마다 abs) / 'end_eval' (배치별 구간 선형 함수)
+        self.cp_distinct_start = 'all_diff'  # 시작 시간 중복 금지 표현: 'all_diff' / 'no_overlap'
 
         self.heuristic_grouping_sequencer = ['EDD', 'SST', 'SA', 'LA']
         self.heuristic_scheduling_sequencer = ['LDD', 'EDD', 'MB']
