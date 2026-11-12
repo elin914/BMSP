@@ -1,6 +1,12 @@
 from typing import List, Tuple
 from data import Batch
 from docplex.cp.model import *
+import sys
+
+
+def cp_log_stream(cfg):
+    """cfg.cp_log가 True면 CP 탐색 로그를 화면에, 아니면 출력하지 않음"""
+    return sys.stdout if getattr(cfg, 'cp_log', False) else None
 
 
 def assign_machines(batch_list, n_machine):
@@ -73,7 +79,7 @@ class CPIntegratedScheduler(BaseIntegratedScheduler):
                 start_sol.add_interval_var_solution(batch_var_dict[b_idx], start=batch.start_time)
             model.set_starting_point(start_sol)
 
-        sol = model.solve(TimeLimit=cfg.cp_search_time_limit, SearchType='Auto', log_output=None)
+        sol = model.solve(TimeLimit=cfg.cp_search_time_limit, SearchType='Auto', log_output=cp_log_stream(cfg))
 
         if sol:
             print(f"Final objective value: {sol.get_objective_value()}")
@@ -272,7 +278,7 @@ class RealCPIntegratedScheduler(BaseIntegratedScheduler):
         # ==============================================================================
         # 3. Solve
         # ==============================================================================
-        sol = model.solve(TimeLimit=cfg.cp_search_time_limit, SearchType='Auto')
+        sol = model.solve(TimeLimit=cfg.cp_search_time_limit, SearchType='Auto', log_output=cp_log_stream(cfg))
 
         if sol:
             print(f"Final objective value (CP): {sol.get_objective_value()}")

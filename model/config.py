@@ -50,6 +50,7 @@ class Config:
         }
 
         self.cp_search_time_limit = 300
+        self.cp_log = False  # True면 CP Optimizer 탐색 로그를 화면에 출력
         self.use_starting_point = False
 
         self.heuristic_grouping_sequencer = ['EDD', 'SST', 'SA', 'LA']

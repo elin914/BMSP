@@ -3,6 +3,7 @@ from data import Job, Batch, PlacedJob
 from docplex.cp.model import *
 from .grouping_sequencers import EDDGroupingSequencer, SSTGroupingSequencer, SAGroupingSequencer, LAGroupingSequencer
 from .groupers import AdjustedBFFPacker
+from .integrated_schedulers import cp_log_stream
 
 
 class BaseIntegratedGrouper:
@@ -110,7 +111,7 @@ class CPGrouper(BaseIntegratedGrouper):
                                                             start=placed_job.y, size=placed_job.height)
             model.set_starting_point(start_sol)
 
-        sol = model.solve(TimeLimit=cfg.cp_search_time_limit, SearchType='Auto')
+        sol = model.solve(TimeLimit=cfg.cp_search_time_limit, SearchType='Auto', log_output=cp_log_stream(cfg))
         if sol:
             placed_job_list_dict = dict()
             for i, job in enumerate(job_list):

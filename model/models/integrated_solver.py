@@ -1,6 +1,6 @@
 from typing import List, Tuple
 from data import Job, PlacedJob, Batch
-from .integrated_schedulers import assign_machines
+from .integrated_schedulers import assign_machines, cp_log_stream
 from docplex.cp.model import *
 
 
@@ -117,7 +117,7 @@ class CPSolver(BaseSolver):
         all_start_times = [model.start_of(batch_var_list[i], end_time + 10000 + i) for i in range(n_bin)]
         model.add(model.all_diff(all_start_times))
         model.add(model.minimize(obj1 * 10000 + obj2))
-        sol = model.solve(TimeLimit=cfg.cp_search_time_limit, SearchType='Auto')
+        sol = model.solve(TimeLimit=cfg.cp_search_time_limit, SearchType='Auto', log_output=cp_log_stream(cfg))
 
         if not sol:
             print("CP failed to find a solution. Returning heuristic solution.")
